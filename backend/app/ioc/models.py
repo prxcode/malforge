@@ -39,21 +39,18 @@ class IOCEntry(Base, TimestampMixin):
 
     __tablename__ = "ioc_entries"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     sample_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("samples.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        UUID(as_uuid=True), ForeignKey("samples.id", ondelete="CASCADE"), nullable=False, index=True
     )
 
     # Indicator data
-    indicator_type: Mapped[str] = mapped_column(
-        Enum(IndicatorType), nullable=False, index=True
-    )
+    indicator_type: Mapped[str] = mapped_column(Enum(IndicatorType), nullable=False, index=True)
     value: Mapped[str] = mapped_column(Text, nullable=False)
     confidence: Mapped[float] = mapped_column(Float, default=0.5, nullable=False)
-    source: Mapped[str] = mapped_column(String(100), nullable=True)  # e.g., "static_strings", "memory_netscan"
+    source: Mapped[str] = mapped_column(
+        String(100), nullable=True
+    )  # e.g., "static_strings", "memory_netscan"
     context: Mapped[str] = mapped_column(Text, nullable=True)  # where the IOC was found
 
     # Relationship

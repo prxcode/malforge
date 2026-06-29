@@ -21,6 +21,7 @@ async def _run_analysis_async(sample_id_str: str) -> None:
         async with async_session_factory() as db:
             # Get sample
             from sqlalchemy import select
+
             result = await db.execute(select(Sample).where(Sample.id == sample_id))
             sample = result.scalar_one_or_none()
 

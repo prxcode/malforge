@@ -20,6 +20,7 @@ async def _run_memory_analysis_async(sample_id_str: str) -> None:
         sample_id = UUID(sample_id_str)
         async with async_session_factory() as db:
             from sqlalchemy import select
+
             result = await db.execute(select(Sample).where(Sample.id == sample_id))
             sample = result.scalar_one_or_none()
 

@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict
 
 class ThreatReportResponse(BaseModel):
     """Full threat report response schema."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID

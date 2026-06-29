@@ -21,6 +21,7 @@ class IOCBase(BaseModel):
 
 class IOCResponse(IOCBase):
     """Full IOC response schema."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID

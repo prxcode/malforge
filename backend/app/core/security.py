@@ -85,10 +85,7 @@ def create_access_token(
 ) -> str:
     """Create a JWT access token."""
     now = datetime.now(UTC)
-    expire = now + (
-        expires_delta
-        or timedelta(minutes=settings.jwt_access_token_expire_minutes)
-    )
+    expire = now + (expires_delta or timedelta(minutes=settings.jwt_access_token_expire_minutes))
     payload = {
         "sub": str(user_id),
         "exp": expire,

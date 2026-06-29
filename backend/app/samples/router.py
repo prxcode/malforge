@@ -135,7 +135,7 @@ async def delete_sample(
     if current_user["role"] not in ["admin", "engineer"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Insufficient permissions to delete samples"
+            detail="Insufficient permissions to delete samples",
         )
 
     sample = await sample_service.get_sample_by_id(db, sample_id)

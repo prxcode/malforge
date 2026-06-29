@@ -21,15 +21,11 @@ class IOCExtractor:
             IndicatorType.DOMAIN: re.compile(
                 r"\b(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+(?:[a-zA-Z]{2,})\b"
             ),
-            IndicatorType.EMAIL: re.compile(
-                r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
-            ),
+            IndicatorType.EMAIL: re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"),
             IndicatorType.REGISTRY_KEY: re.compile(
                 r"(?:HKLM|HKCU|HKCR|HKU|HKCC|HKEY_LOCAL_MACHINE|HKEY_CURRENT_USER)\\[\\a-zA-Z0-9_\-]+"
             ),
-            IndicatorType.FILE_PATH: re.compile(
-                r"(?:[a-zA-Z]:\\|\b\\\\)[\\\w\-. ]+"
-            ),
+            IndicatorType.FILE_PATH: re.compile(r"(?:[a-zA-Z]:\\|\b\\\\)[\\\w\-. ]+"),
             IndicatorType.FILE_HASH_MD5: re.compile(r"\b[a-fA-F0-9]{32}\b"),
             IndicatorType.FILE_HASH_SHA1: re.compile(r"\b[a-fA-F0-9]{40}\b"),
             IndicatorType.FILE_HASH_SHA256: re.compile(r"\b[a-fA-F0-9]{64}\b"),
@@ -62,13 +58,15 @@ class IOCExtractor:
                     # Compute confidence
                     confidence = self._compute_confidence(ind_type, match)
 
-                    extracted.append({
-                        "indicator_type": ind_type,
-                        "value": match,
-                        "confidence": confidence,
-                        "source": "static_strings",
-                        "context": s[:100] # store partial context
-                    })
+                    extracted.append(
+                        {
+                            "indicator_type": ind_type,
+                            "value": match,
+                            "confidence": confidence,
+                            "source": "static_strings",
+                            "context": s[:100],  # store partial context
+                        }
+                    )
 
         return extracted
 

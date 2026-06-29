@@ -12,6 +12,7 @@ from app.detection.models import RuleType
 
 class ValidationResultResponse(BaseModel):
     """Validation metrics for a rule."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -30,6 +31,7 @@ class ValidationResultResponse(BaseModel):
 
 class DetectionRuleResponse(BaseModel):
     """Full detection rule response."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID

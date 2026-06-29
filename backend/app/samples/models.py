@@ -46,9 +46,7 @@ class Sample(Base, UUIDMixin, TimestampMixin):
     # File metadata
     file_size: Mapped[int] = mapped_column(BigInteger, nullable=False)
     entropy: Mapped[float] = mapped_column(Float, nullable=True)
-    file_type: Mapped[str] = mapped_column(
-        Enum(FileType), default=FileType.UNKNOWN, nullable=False
-    )
+    file_type: Mapped[str] = mapped_column(Enum(FileType), default=FileType.UNKNOWN, nullable=False)
     mime_type: Mapped[str] = mapped_column(String(100), nullable=True)
 
     # Analysis metadata
@@ -75,9 +73,7 @@ class Sample(Base, UUIDMixin, TimestampMixin):
     memory_analysis = relationship(
         "MemoryAnalysisResult", back_populates="sample", uselist=False, cascade="all, delete-orphan"
     )
-    ioc_entries = relationship(
-        "IOCEntry", back_populates="sample", cascade="all, delete-orphan"
-    )
+    ioc_entries = relationship("IOCEntry", back_populates="sample", cascade="all, delete-orphan")
     detection_rules = relationship(
         "DetectionRule", back_populates="sample", cascade="all, delete-orphan"
     )

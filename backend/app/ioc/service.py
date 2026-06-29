@@ -38,7 +38,7 @@ class IOCService:
         indicator_type: IndicatorType | None = None,
         query_str: str | None = None,
         skip: int = 0,
-        limit: int = 50
+        limit: int = 50,
     ) -> tuple[list[IOCEntry], int]:
         """Search IOCs globally."""
         query = select(IOCEntry)
@@ -69,8 +69,7 @@ class IOCService:
         # Remove old static_strings IOCs for this sample if re-running
         await db.execute(
             select(IOCEntry).where(
-                IOCEntry.sample_id == sample_id,
-                IOCEntry.source == "static_strings"
+                IOCEntry.sample_id == sample_id, IOCEntry.source == "static_strings"
             )
         )
         # TODO: Implement proper deletion of old entries if needed

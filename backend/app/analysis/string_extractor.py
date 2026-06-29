@@ -12,19 +12,21 @@ class StringExtractor:
         self.min_length = min_length
 
         # Pre-compile regexes
-        self.ascii_re = re.compile(b"[\x20-\x7E]{" + str(min_length).encode() + b",}")
-        self.unicode_re = re.compile(b"(?:[\x20-\x7E]\x00){" + str(min_length).encode() + b",}")
+        self.ascii_re = re.compile(b"[\x20-\x7e]{" + str(min_length).encode() + b",}")
+        self.unicode_re = re.compile(b"(?:[\x20-\x7e]\x00){" + str(min_length).encode() + b",}")
 
         self.url_re = re.compile(r"https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+")
         self.ip_re = re.compile(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b")
-        self.registry_re = re.compile(r"(?:HKLM|HKCU|HKCR|HKU|HKCC|HKEY_LOCAL_MACHINE|HKEY_CURRENT_USER)\\[\\a-zA-Z0-9_\-]+")
+        self.registry_re = re.compile(
+            r"(?:HKLM|HKCU|HKCR|HKU|HKCC|HKEY_LOCAL_MACHINE|HKEY_CURRENT_USER)\\[\\a-zA-Z0-9_\-]+"
+        )
         self.file_path_re = re.compile(r"(?:[a-zA-Z]:\\|\b\\\\)[\\\w\-. ]+")
 
     def extract(self) -> dict[str, list[str]]:
         """Extract strings and categorize them."""
         # 1. Raw extraction
-        ascii_strings = [s.decode('ascii') for s in self.ascii_re.findall(self.file_data)]
-        unicode_strings = [s.decode('utf-16le') for s in self.unicode_re.findall(self.file_data)]
+        ascii_strings = [s.decode("ascii") for s in self.ascii_re.findall(self.file_data)]
+        unicode_strings = [s.decode("utf-16le") for s in self.unicode_re.findall(self.file_data)]
 
         all_strings = set(ascii_strings + unicode_strings)
 
@@ -35,7 +37,7 @@ class StringExtractor:
             "ips": [],
             "registry": [],
             "paths": [],
-            "suspicious": []
+            "suspicious": [],
         }
 
         # Filter sets to avoid duplicates
@@ -45,9 +47,19 @@ class StringExtractor:
         paths: set[str] = set()
 
         suspicious_keywords = [
-            "cmd.exe", "powershell", "virtualalloc", "writeprocessmemory",
-            "createremotethread", "setwindowshook", "loadlibrary", "getprocaddress",
-            "vssadmin", "shadowcopy", "wevtutil", "schtasks", "wmi"
+            "cmd.exe",
+            "powershell",
+            "virtualalloc",
+            "writeprocessmemory",
+            "createremotethread",
+            "setwindowshook",
+            "loadlibrary",
+            "getprocaddress",
+            "vssadmin",
+            "shadowcopy",
+            "wevtutil",
+            "schtasks",
+            "wmi",
         ]
 
         for s in all_strings:
@@ -65,7 +77,7 @@ class StringExtractor:
 
             # Paths
             for match in self.file_path_re.findall(s):
-                if len(match) > 5: # Filter out very short noise
+                if len(match) > 5:  # Filter out very short noise
                     paths.add(match)
 
             # Suspicious

@@ -58,7 +58,7 @@ class DetectionService:
             analysis_data = {
                 "suspicious_apis": static_analysis.suspicious_apis,
                 "sections": static_analysis.sections,
-                "strings": static_analysis.strings.get("suspicious", [])
+                "strings": static_analysis.strings.get("suspicious", []),
             }
 
             yara_text = self.yara_generator.generate(sample.sha256, analysis_data)
@@ -68,20 +68,20 @@ class DetectionService:
                 rule_type=RuleType.YARA,
                 rule_name=f"MAP_YARA_{sample.sha256[:8]}",
                 rule_text=yara_text,
-                metadata={"auto_generated": True}
+                metadata={"auto_generated": True},
             )
             db.add(yara_rule)
             rules.append(yara_rule)
 
         # 2. Generate Sigma if IOCs exist
-        ioc_result = await db.execute(
-            select(IOCEntry).where(IOCEntry.sample_id == sample.id)
-        )
+        ioc_result = await db.execute(select(IOCEntry).where(IOCEntry.sample_id == sample.id))
         iocs = list(ioc_result.scalars().all())
 
         if iocs:
             # Convert to dicts for generator
-            ioc_dicts = [{"indicator_type": ioc.indicator_type.value, "value": ioc.value} for ioc in iocs]
+            ioc_dicts = [
+                {"indicator_type": ioc.indicator_type.value, "value": ioc.value} for ioc in iocs
+            ]
             sigma_text = self.sigma_generator.generate(sample.sha256, ioc_dicts)
 
             sigma_rule = DetectionRule(
@@ -89,7 +89,7 @@ class DetectionService:
                 rule_type=RuleType.SIGMA,
                 rule_name=f"MAP_SIGMA_{sample.sha256[:8]}",
                 rule_text=sigma_text,
-                metadata={"auto_generated": True}
+                metadata={"auto_generated": True},
             )
             db.add(sigma_rule)
             rules.append(sigma_rule)
@@ -104,9 +104,7 @@ class DetectionService:
             return None
 
         # Get sample data
-        sample_result = await db.execute(
-            select(Sample).where(Sample.id == rule.sample_id)
-        )
+        sample_result = await db.execute(select(Sample).where(Sample.id == rule.sample_id))
         sample = sample_result.scalar_one_or_none()
 
         if not sample:
@@ -137,7 +135,7 @@ class DetectionService:
             score=score,
             test_samples_count=1,
             matches_count=len(val_data["matches"]),
-            details=val_data
+            details=val_data,
         )
 
         db.add(val_result)

@@ -17,7 +17,9 @@ from app.samples.models import Sample, SampleStatus
 class StaticAnalysisService:
     """Service for running static analysis on samples."""
 
-    async def get_analysis_by_sample_id(self, db: AsyncSession, sample_id: UUID) -> StaticAnalysisResult | None:
+    async def get_analysis_by_sample_id(
+        self, db: AsyncSession, sample_id: UUID
+    ) -> StaticAnalysisResult | None:
         """Retrieve static analysis results for a sample."""
         result = await db.execute(
             select(StaticAnalysisResult).where(StaticAnalysisResult.sample_id == sample_id)
@@ -43,9 +45,7 @@ class StaticAnalysisService:
         if "error" in pe_data:
             # Not a valid PE file, store string extraction only
             result = StaticAnalysisResult(
-                sample_id=sample.id,
-                strings=strings_data,
-                heuristic_score=0.0
+                sample_id=sample.id, strings=strings_data, heuristic_score=0.0
             )
         else:
             # 4. Run heuristics
@@ -60,8 +60,11 @@ class StaticAnalysisService:
                 all_funcs.update([f.lower() for f in imp.get("functions", [])])
 
             suspicious_keywords = [
-                "virtualalloc", "writeprocessmemory", "createremotethread",
-                "setwindowshook", "isdebuggerpresent"
+                "virtualalloc",
+                "writeprocessmemory",
+                "createremotethread",
+                "setwindowshook",
+                "isdebuggerpresent",
             ]
 
             for func in all_funcs:

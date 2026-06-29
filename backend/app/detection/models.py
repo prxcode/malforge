@@ -26,12 +26,9 @@ class DetectionRule(Base, TimestampMixin):
 
     __tablename__ = "detection_rules"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     sample_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("samples.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        UUID(as_uuid=True), ForeignKey("samples.id", ondelete="CASCADE"), nullable=False, index=True
     )
 
     # Rule metadata
@@ -58,12 +55,12 @@ class ValidationResult(Base, TimestampMixin):
 
     __tablename__ = "validation_results"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     rule_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("detection_rules.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("detection_rules.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
 
     # Metrics

@@ -65,24 +65,31 @@ def create_app() -> FastAPI:
     app.include_router(auth_router, prefix=settings.api_prefix)
 
     from app.samples.router import router as samples_router
+
     app.include_router(samples_router, prefix=settings.api_prefix)
 
     from app.analysis.router import router as analysis_router
+
     app.include_router(analysis_router, prefix=settings.api_prefix)
 
     from app.ioc.router import router as ioc_router
+
     app.include_router(ioc_router, prefix=settings.api_prefix)
 
     from app.detection.router import router as detection_router
+
     app.include_router(detection_router, prefix=settings.api_prefix)
 
     from app.memory.router import router as memory_router
+
     app.include_router(memory_router, prefix=settings.api_prefix)
 
     from app.reports.router import router as reports_router
+
     app.include_router(reports_router, prefix=settings.api_prefix)
 
     from app.orchestrator.router import router as orchestrator_router
+
     app.include_router(orchestrator_router, prefix=settings.api_prefix)
 
     # All core routers are now included.

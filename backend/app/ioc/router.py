@@ -24,9 +24,7 @@ async def get_sample_iocs(
 ):
     """Get all IOCs extracted for a specific sample."""
     skip = (page - 1) * size
-    items, total = await ioc_service.list_iocs_for_sample(
-        db, sample_id, skip=skip, limit=size
-    )
+    items, total = await ioc_service.list_iocs_for_sample(db, sample_id, skip=skip, limit=size)
 
     return IOCListResponse(
         items=items,

@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict
 
 class StaticAnalysisResponse(BaseModel):
     """Full static analysis response schema."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID

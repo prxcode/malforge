@@ -10,8 +10,10 @@ from app.main import app
 async def mock_lifespan(app):
     yield
 
+
 app.router.lifespan_context = mock_lifespan
 client = TestClient(app)
+
 
 def test_health_check():
     """Test that the application health check works."""
@@ -20,6 +22,7 @@ def test_health_check():
     data = response.json()
     assert data["status"] == "ok"
     assert "MAP" in data["service"]
+
 
 def test_api_docs():
     """Test that the API documentation is generated and accessible."""

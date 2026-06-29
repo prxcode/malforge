@@ -76,8 +76,6 @@ async def register(
     )
 
 
-
-
 class LoginBody(BaseModel):
     username: str
     password: str

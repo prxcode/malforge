@@ -17,12 +17,7 @@ class DetectionValidator:
         Compile the YARA rule and run it against the provided file data.
         Returns validation metrics.
         """
-        result = {
-            "is_valid": False,
-            "true_positive": False,
-            "error": None,
-            "matches": []
-        }
+        result = {"is_valid": False, "true_positive": False, "error": None, "matches": []}
 
         try:
             # Test 1: Syntax compilation
@@ -35,10 +30,14 @@ class DetectionValidator:
             if matches:
                 result["true_positive"] = True
                 for match in matches:
-                    result["matches"].append({
-                        "rule": match.rule,
-                        "strings": [(s[0], s[1], s[2][:20]) for s in match.strings] # offset, string_id, partial_data
-                    })
+                    result["matches"].append(
+                        {
+                            "rule": match.rule,
+                            "strings": [
+                                (s[0], s[1], s[2][:20]) for s in match.strings
+                            ],  # offset, string_id, partial_data
+                        }
+                    )
 
         except yara.SyntaxError as e:
             result["error"] = f"Syntax error: {e!s}"

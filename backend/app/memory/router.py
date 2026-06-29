@@ -28,8 +28,7 @@ async def trigger_memory_analysis(
 
     if sample.file_type != "memory_dump":
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Sample is not a memory dump"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Sample is not a memory dump"
         )
 
     run_memory_analysis.delay(str(sample.id))
@@ -47,6 +46,6 @@ async def get_memory_analysis(
     if not result:
         raise HTTPException(
             status_code=404,
-            detail="Memory analysis results not found. Analysis may still be pending."
+            detail="Memory analysis results not found. Analysis may still be pending.",
         )
     return result

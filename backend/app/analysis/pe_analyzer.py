@@ -34,19 +34,27 @@ class PEAnalyzer:
             "sections": self._extract_sections(),
             "imports": self._extract_imports(),
             "exports": self._extract_exports(),
-            "entry_point": hex(self.pe.OPTIONAL_HEADER.AddressOfEntryPoint) if hasattr(self.pe, 'OPTIONAL_HEADER') else None,
-            "image_base": hex(self.pe.OPTIONAL_HEADER.ImageBase) if hasattr(self.pe, 'OPTIONAL_HEADER') else None,
+            "entry_point": (
+                hex(self.pe.OPTIONAL_HEADER.AddressOfEntryPoint)
+                if hasattr(self.pe, "OPTIONAL_HEADER")
+                else None
+            ),
+            "image_base": (
+                hex(self.pe.OPTIONAL_HEADER.ImageBase)
+                if hasattr(self.pe, "OPTIONAL_HEADER")
+                else None
+            ),
             "timestamp": self._extract_timestamp(),
         }
 
     def _extract_headers(self) -> dict[str, Any]:
         """Extract basic PE headers."""
         headers = {}
-        if hasattr(self.pe, 'FILE_HEADER'):
+        if hasattr(self.pe, "FILE_HEADER"):
             headers["machine"] = hex(self.pe.FILE_HEADER.Machine)
             headers["characteristics"] = hex(self.pe.FILE_HEADER.Characteristics)
 
-        if hasattr(self.pe, 'OPTIONAL_HEADER'):
+        if hasattr(self.pe, "OPTIONAL_HEADER"):
             headers["magic"] = hex(self.pe.OPTIONAL_HEADER.Magic)
             headers["subsystem"] = hex(self.pe.OPTIONAL_HEADER.Subsystem)
             headers["dll_characteristics"] = hex(self.pe.OPTIONAL_HEADER.DllCharacteristics)
@@ -61,20 +69,22 @@ class PEAnalyzer:
             with contextlib.suppress(Exception):
                 name = section.Name.decode("utf-8", errors="replace").strip("\x00")
 
-            sections.append({
-                "name": name,
-                "virtual_address": hex(section.VirtualAddress),
-                "virtual_size": section.Misc_VirtualSize,
-                "raw_size": section.SizeOfRawData,
-                "entropy": round(section.get_entropy(), 4),
-                "characteristics": hex(section.Characteristics)
-            })
+            sections.append(
+                {
+                    "name": name,
+                    "virtual_address": hex(section.VirtualAddress),
+                    "virtual_size": section.Misc_VirtualSize,
+                    "raw_size": section.SizeOfRawData,
+                    "entropy": round(section.get_entropy(), 4),
+                    "characteristics": hex(section.Characteristics),
+                }
+            )
         return sections
 
     def _extract_imports(self) -> list[dict[str, Any]]:
         """Extract imported DLLs and their functions."""
         imports = []
-        if hasattr(self.pe, 'DIRECTORY_ENTRY_IMPORT'):
+        if hasattr(self.pe, "DIRECTORY_ENTRY_IMPORT"):
             for entry in self.pe.DIRECTORY_ENTRY_IMPORT:
                 dll_name = ""
                 with contextlib.suppress(Exception):
@@ -92,16 +102,13 @@ class PEAnalyzer:
                     elif imp.ordinal:
                         functions.append(f"Ordinal{imp.ordinal}")
 
-                imports.append({
-                    "dll": dll_name,
-                    "functions": functions
-                })
+                imports.append({"dll": dll_name, "functions": functions})
         return imports
 
     def _extract_exports(self) -> list[str]:
         """Extract exported functions."""
         exports = []
-        if hasattr(self.pe, 'DIRECTORY_ENTRY_EXPORT'):
+        if hasattr(self.pe, "DIRECTORY_ENTRY_EXPORT"):
             for exp in self.pe.DIRECTORY_ENTRY_EXPORT.symbols:
                 if exp.name:
                     with contextlib.suppress(Exception):
@@ -110,7 +117,7 @@ class PEAnalyzer:
 
     def _extract_timestamp(self) -> str:
         """Extract compilation timestamp."""
-        if hasattr(self.pe, 'FILE_HEADER'):
+        if hasattr(self.pe, "FILE_HEADER"):
             timestamp_val = self.pe.FILE_HEADER.TimeDateStamp
             try:
                 dt = datetime.fromtimestamp(timestamp_val, tz=UTC)

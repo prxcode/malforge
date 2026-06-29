@@ -40,7 +40,6 @@ async def get_analysis(
     result = await analysis_service.get_analysis_by_sample_id(db, sample_id)
     if not result:
         raise HTTPException(
-            status_code=404,
-            detail="Analysis results not found. Analysis may still be pending."
+            status_code=404, detail="Analysis results not found. Analysis may still be pending."
         )
     return result

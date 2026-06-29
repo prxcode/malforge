@@ -25,11 +25,7 @@ class HeuristicsEngine:
         return self.flags, round(self.score, 1)
 
     def _add_flag(self, name: str, description: str, severity: str, weight: float):
-        self.flags.append({
-            "name": name,
-            "description": description,
-            "severity": severity
-        })
+        self.flags.append({"name": name, "description": description, "severity": severity})
         self.score += weight
 
     def _check_entropy(self):
@@ -41,12 +37,24 @@ class HeuristicsEngine:
                     "High Entropy Section",
                     f"Section {sec.get('name')} has entropy {sec.get('entropy')} (>7.2). May be packed.",
                     "high",
-                    3.0
+                    3.0,
                 )
 
     def _check_section_names(self):
         """Check for unusual section names."""
-        standard_sections = {".text", ".data", ".rsrc", ".rdata", ".reloc", ".pdata", ".bss", ".edata", ".idata", ".xdata", ".tls"}
+        standard_sections = {
+            ".text",
+            ".data",
+            ".rsrc",
+            ".rdata",
+            ".reloc",
+            ".pdata",
+            ".bss",
+            ".edata",
+            ".idata",
+            ".xdata",
+            ".tls",
+        }
         sections = self.pe_data.get("sections", [])
         for sec in sections:
             name = sec.get("name", "").lower()
@@ -55,7 +63,9 @@ class HeuristicsEngine:
                 if name.startswith("upx"):
                     self._add_flag("UPX Packed", "UPX section names detected.", "medium", 2.0)
                 else:
-                    self._add_flag("Unusual Section Name", f"Section {name} is not standard.", "low", 1.0)
+                    self._add_flag(
+                        "Unusual Section Name", f"Section {name} is not standard.", "low", 1.0
+                    )
 
     def _check_suspicious_imports(self):
         """Check for API combinations associated with malicious behavior."""
@@ -66,12 +76,16 @@ class HeuristicsEngine:
             all_funcs.update([f.lower() for f in imp.get("functions", [])])
 
         # Process Injection
-        if "virtualallocex" in all_funcs and "writeprocessmemory" in all_funcs and "createremotethread" in all_funcs:
+        if (
+            "virtualallocex" in all_funcs
+            and "writeprocessmemory" in all_funcs
+            and "createremotethread" in all_funcs
+        ):
             self._add_flag(
                 "Process Injection APIs",
                 "Contains VirtualAllocEx, WriteProcessMemory, and CreateRemoteThread.",
                 "high",
-                4.0
+                4.0,
             )
 
         # Keylogging
@@ -79,12 +93,18 @@ class HeuristicsEngine:
         key_apis = {"getasynckeystate", "getkeystate"}
 
         if any(api in all_funcs for api in hook_apis) and any(api in all_funcs for api in key_apis):
-            self._add_flag("Keylogging APIs", "Contains window hook and keystate APIs.", "high", 3.5)
+            self._add_flag(
+                "Keylogging APIs", "Contains window hook and keystate APIs.", "high", 3.5
+            )
 
         # Cryptography / Ransomware
         if "cryptacquirecontexta" in all_funcs and "cryptencrypt" in all_funcs:
-            self._add_flag("Cryptography APIs", "Contains crypto APIs often used in ransomware.", "medium", 2.0)
+            self._add_flag(
+                "Cryptography APIs", "Contains crypto APIs often used in ransomware.", "medium", 2.0
+            )
 
         # Anti-Debugging
         if "isdebuggerpresent" in all_funcs or "checkremotedebuggerpresent" in all_funcs:
-            self._add_flag("Anti-Debugging APIs", "Contains APIs used to detect debuggers.", "medium", 2.0)
+            self._add_flag(
+                "Anti-Debugging APIs", "Contains APIs used to detect debuggers.", "medium", 2.0
+            )

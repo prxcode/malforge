@@ -13,11 +13,13 @@ from app.samples.models import Sample
 
 logger = structlog.get_logger()
 
+
 async def _generate_rules_async(sample_id_str: str) -> None:
     try:
         sample_id = UUID(sample_id_str)
         async with async_session_factory() as db:
             from sqlalchemy import select
+
             result = await db.execute(select(Sample).where(Sample.id == sample_id))
             sample = result.scalar_one_or_none()
 
@@ -32,6 +34,7 @@ async def _generate_rules_async(sample_id_str: str) -> None:
 
     except Exception as e:
         logger.exception("Failed background rule generation", error=str(e))
+
 
 @shared_task(name="app.detection.tasks.generate_rules")
 def generate_rules_task(sample_id: str) -> None:

@@ -14,12 +14,12 @@ class ThreatReport(Base, TimestampMixin):
 
     __tablename__ = "threat_reports"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     sample_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("samples.id", ondelete="CASCADE"),
-        unique=True, nullable=False
+        UUID(as_uuid=True),
+        ForeignKey("samples.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
     )
 
     # Report sections

@@ -19,6 +19,7 @@ class SampleBase(BaseModel):
 
 class SampleCreate(SampleBase):
     """Schema for sample creation (usually handled via form data during upload)."""
+
     pass
 
 
@@ -31,6 +32,7 @@ class SampleUpdate(BaseModel):
 
 class SampleResponse(SampleBase):
     """Full sample response schema."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID

@@ -70,7 +70,7 @@ async def validate_rule(
     if not val_result:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Validation failed or not supported for this rule type"
+            detail="Validation failed or not supported for this rule type",
         )
 
     return val_result

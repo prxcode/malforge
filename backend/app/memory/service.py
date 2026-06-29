@@ -18,7 +18,9 @@ logger = structlog.get_logger()
 class MemoryAnalysisService:
     """Service for running memory forensics on samples."""
 
-    async def get_analysis_by_sample_id(self, db: AsyncSession, sample_id: UUID) -> MemoryAnalysisResult | None:
+    async def get_analysis_by_sample_id(
+        self, db: AsyncSession, sample_id: UUID
+    ) -> MemoryAnalysisResult | None:
         """Retrieve memory analysis results for a sample."""
         result = await db.execute(
             select(MemoryAnalysisResult).where(MemoryAnalysisResult.sample_id == sample_id)
@@ -60,7 +62,7 @@ class MemoryAnalysisService:
             handles=analysis_data.get("handles", []),
             command_history=analysis_data.get("command_history", []),
             injected_memory=analysis_data.get("injected_memory", []),
-            timeline=analysis_data.get("timeline", [])
+            timeline=analysis_data.get("timeline", []),
         )
 
         # Update existing or add new

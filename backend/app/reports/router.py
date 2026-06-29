@@ -25,8 +25,7 @@ async def get_report_for_sample(
     report = await report_service.get_report_by_sample_id(db, sample_id)
     if not report:
         raise HTTPException(
-            status_code=404,
-            detail="Threat report not found. It may not have been generated yet."
+            status_code=404, detail="Threat report not found. It may not have been generated yet."
         )
     return report
 

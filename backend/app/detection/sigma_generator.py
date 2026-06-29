@@ -29,7 +29,7 @@ class SigmaGenerator:
             "logsource:",
             "    category: process_creation",
             "    product: windows",
-            "detection:"
+            "detection:",
         ]
 
         has_selection = False
@@ -38,9 +38,9 @@ class SigmaGenerator:
             has_selection = True
             yaml_lines.append("    selection_files:")
             yaml_lines.append("        Image|endswith:")
-            for path in file_paths[:5]: # Take top 5 to avoid massive rules
+            for path in file_paths[:5]:  # Take top 5 to avoid massive rules
                 # extract just the filename part for matching if possible
-                filename = path.split('\\')[-1]
+                filename = path.split("\\")[-1]
                 if filename:
                     yaml_lines.append(f"            - '\\{filename}'")
 
@@ -66,15 +66,12 @@ class SigmaGenerator:
 
             yaml_lines.append(f"    condition: {' or '.join(selections)}")
 
-        yaml_lines.extend([
-            "falsepositives:",
-            "    - Unknown",
-            "level: medium"
-        ])
+        yaml_lines.extend(["falsepositives:", "    - Unknown", "level: medium"])
 
         return "\n".join(yaml_lines)
 
     def _generate_uuid(self, hash_str: str) -> str:
         """Generate a stable pseudo-UUID based on the hash."""
         import uuid
+
         return str(uuid.uuid5(uuid.NAMESPACE_DNS, f"map.local.{hash_str}"))

@@ -21,14 +21,16 @@ class ThreatReportService:
     def __init__(self):
         self.generator = ThreatReportGenerator()
 
-    async def get_report_by_sample_id(self, db: AsyncSession, sample_id: UUID) -> ThreatReport | None:
+    async def get_report_by_sample_id(
+        self, db: AsyncSession, sample_id: UUID
+    ) -> ThreatReport | None:
         """Retrieve threat report for a sample."""
-        result = await db.execute(
-            select(ThreatReport).where(ThreatReport.sample_id == sample_id)
-        )
+        result = await db.execute(select(ThreatReport).where(ThreatReport.sample_id == sample_id))
         return result.scalar_one_or_none()
 
-    async def list_reports(self, db: AsyncSession, skip: int = 0, limit: int = 20) -> tuple[list[ThreatReport], int]:
+    async def list_reports(
+        self, db: AsyncSession, skip: int = 0, limit: int = 20
+    ) -> tuple[list[ThreatReport], int]:
         """List all threat reports."""
         query = select(ThreatReport)
 
@@ -50,36 +52,55 @@ class ThreatReportService:
             "sha256": sample.sha256,
             "md5": sample.md5,
             "file_size": sample.file_size,
-            "file_type": sample.file_type.value if sample.file_type else "unknown"
+            "file_type": sample.file_type.value if sample.file_type else "unknown",
         }
 
         # 2. Gather Static Analysis
-        static_result = await db.execute(select(StaticAnalysisResult).where(StaticAnalysisResult.sample_id == sample.id))
+        static_result = await db.execute(
+            select(StaticAnalysisResult).where(StaticAnalysisResult.sample_id == sample.id)
+        )
         static = static_result.scalar_one_or_none()
-        static_dict = {
-            "entropy_score": static.entropy_score,
-            "compiler": static.compiler,
-            "heuristic_score": static.heuristic_score,
-            "heuristic_flags": static.heuristic_flags
-        } if static else None
+        static_dict = (
+            {
+                "entropy_score": static.entropy_score,
+                "compiler": static.compiler,
+                "heuristic_score": static.heuristic_score,
+                "heuristic_flags": static.heuristic_flags,
+            }
+            if static
+            else None
+        )
 
         # 3. Gather Memory Analysis
-        mem_result = await db.execute(select(MemoryAnalysisResult).where(MemoryAnalysisResult.sample_id == sample.id))
+        mem_result = await db.execute(
+            select(MemoryAnalysisResult).where(MemoryAnalysisResult.sample_id == sample.id)
+        )
         mem = mem_result.scalar_one_or_none()
-        mem_dict = {
-            "os_profile": mem.os_profile
-        } if mem else None
+        mem_dict = {"os_profile": mem.os_profile} if mem else None
 
         # 4. Gather IOCs
         ioc_result = await db.execute(
-            select(IOCEntry).where(IOCEntry.sample_id == sample.id).order_by(IOCEntry.confidence.desc())
+            select(IOCEntry)
+            .where(IOCEntry.sample_id == sample.id)
+            .order_by(IOCEntry.confidence.desc())
         )
-        iocs = [{"indicator_type": ioc.indicator_type.value, "value": ioc.value, "confidence": ioc.confidence}
-                for ioc in ioc_result.scalars().all()]
+        iocs = [
+            {
+                "indicator_type": ioc.indicator_type.value,
+                "value": ioc.value,
+                "confidence": ioc.confidence,
+            }
+            for ioc in ioc_result.scalars().all()
+        ]
 
         # 5. Gather Rules
-        rule_result = await db.execute(select(DetectionRule).where(DetectionRule.sample_id == sample.id))
-        rules = [{"rule_name": r.rule_name, "rule_type": r.rule_type.value} for r in rule_result.scalars().all()]
+        rule_result = await db.execute(
+            select(DetectionRule).where(DetectionRule.sample_id == sample.id)
+        )
+        rules = [
+            {"rule_name": r.rule_name, "rule_type": r.rule_type.value}
+            for r in rule_result.scalars().all()
+        ]
 
         # 6. Generate Report
         report_data = self.generator.generate(sample_meta, static_dict, mem_dict, iocs, rules)
@@ -95,7 +116,7 @@ class ThreatReportService:
             ioc_summary=report_data["ioc_summary"],
             detection_opportunities=report_data["detection_opportunities"],
             recommendations=report_data["recommendations"],
-            rule_references=report_data["rule_references"]
+            rule_references=report_data["rule_references"],
         )
 
         # Delete existing if any

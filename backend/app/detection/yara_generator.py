@@ -19,13 +19,10 @@ class YaraGenerator:
         strings_list, conditions = self._generate_strings_and_conditions(analysis_data)
 
         # Format the rule
-        rule_lines = [
-            f"rule {rule_name} {{",
-            "    meta:"
-        ]
+        rule_lines = [f"rule {rule_name} {{", "    meta:"]
 
         for k, v in meta.items():
-            rule_lines.append(f"        {k} = \"{v}\"")
+            rule_lines.append(f'        {k} = "{v}"')
 
         if strings_list:
             rule_lines.append("")
@@ -54,16 +51,18 @@ class YaraGenerator:
             "date": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d"),
             "hash": sample_hash,
             "tlp": "WHITE",
-            "version": "1.0"
+            "version": "1.0",
         }
 
-    def _generate_strings_and_conditions(self, analysis_data: dict[str, Any]) -> tuple[list[str], list[str]]:
+    def _generate_strings_and_conditions(
+        self, analysis_data: dict[str, Any]
+    ) -> tuple[list[str], list[str]]:
         """Generate YARA strings and corresponding conditions."""
         strings = []
         conditions = []
 
         # Basic PE condition
-        conditions.append("uint16(0) == 0x5a4d") # MZ signature
+        conditions.append("uint16(0) == 0x5a4d")  # MZ signature
 
         # Use suspicious strings
         suspicious = analysis_data.get("suspicious_apis", [])
@@ -72,7 +71,7 @@ class YaraGenerator:
         for s in suspicious:
             # We add simple text strings, properly escaped
             s_escaped = s.replace('"', '\\"')
-            strings.append(f"$s{str_count} = \"{s_escaped}\" ascii wide nocase")
+            strings.append(f'$s{str_count} = "{s_escaped}" ascii wide nocase')
             str_count += 1
 
         if str_count > 0:
