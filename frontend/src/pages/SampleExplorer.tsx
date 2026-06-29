@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { FileSearch, Clock, Upload, AlertCircle } from 'lucide-react';
 
 export function SampleExplorer() {
@@ -7,7 +7,7 @@ export function SampleExplorer() {
   const [scanResult, setScanResult] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const handleUpload = async (e: React.FormEvent) => {
+  const handleUpload = async (e: FormEvent) => {
     e.preventDefault();
     if (!file) return;
 
@@ -41,23 +41,23 @@ export function SampleExplorer() {
     <div className="space-y-6 animate-in fade-in duration-500">
       <header>
         <h2 className="text-2xl font-bold text-foreground">Sample Explorer</h2>
-        <p className="text-muted mt-1 text-sm">Upload a new sample for immediate pipeline scanning.</p>
+        <p className="text-muted-foreground mt-1 text-sm">Upload a new sample for immediate pipeline scanning.</p>
       </header>
 
-      <div className="bg-card rounded-xl border border-white/5 p-6 mb-6">
+      <div className="bg-card rounded-xl border border-border p-6 mb-6">
         <form onSubmit={handleUpload} className="flex gap-4 items-center">
           <input 
             type="file" 
             onChange={(e) => setFile(e.target.files?.[0] || null)}
-            className="flex-1 bg-background border border-white/10 rounded-lg px-4 py-2 text-sm text-muted file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-primary/20 file:text-primary hover:file:bg-primary/30"
+            className="flex-1 bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-primary/20 file:text-primary hover:file:bg-primary/30"
           />
           <button 
             type="submit" 
             disabled={!file || isUploading}
-            className="bg-white hover:bg-neutral-200 text-black px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
           >
-            {isUploading ? <Clock className="animate-spin text-black" size={18} /> : <Upload className="text-black" size={18} />}
-            <span className="text-black">{isUploading ? 'Scanning Pipeline...' : 'Upload Sample'}</span>
+            {isUploading ? <Clock className="animate-spin" size={18} /> : <Upload size={18} />}
+            <span>{isUploading ? 'Scanning Pipeline...' : 'Upload Sample'}</span>
           </button>
         </form>
         {errorMsg && (
@@ -73,26 +73,26 @@ export function SampleExplorer() {
           <div className="flex items-center gap-2 mb-4">
             <AlertCircle className={scanResult.classification === 'MALICIOUS' ? 'text-destructive' : 'text-primary'} />
             <h3 className="text-xl font-bold">{scanResult.classification}</h3>
-            <span className="ml-auto font-mono text-sm opacity-70">Score: {scanResult.risk_score}/100</span>
+            <span className="ml-auto font-mono text-sm text-muted-foreground">Score: {scanResult.risk_score}/100</span>
           </div>
-          <div className="grid grid-cols-2 gap-4 text-sm font-mono opacity-80">
+          <div className="grid grid-cols-2 gap-4 text-sm font-mono text-muted-foreground">
             <div>SHA256: {scanResult.sha256}</div>
             <div>YARA Matches: {scanResult.yara_matches.join(', ') || 'None'}</div>
           </div>
         </div>
       )}
 
-      <div className="bg-card rounded-xl border border-white/5 overflow-hidden">
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-white/[0.02] text-muted text-xs uppercase tracking-wider">
+            <tr className="bg-secondary text-muted-foreground text-xs uppercase tracking-wider">
               <th className="p-4 font-medium">Filename</th>
               <th className="p-4 font-medium">SHA256 Hash</th>
               <th className="p-4 font-medium">Risk Score</th>
               <th className="p-4 font-medium">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5 text-sm">
+          <tbody className="divide-y divide-border text-sm">
             {scanResult && (
               <SampleRow 
                 name={scanResult.sample_id} 
@@ -110,13 +110,13 @@ export function SampleExplorer() {
 
 function SampleRow({ name, hash, score, status }: { name: string, hash: string, score: number, status: string }) {
   return (
-    <tr className="hover:bg-white/[0.02] transition-colors group cursor-pointer">
+    <tr className="hover:bg-secondary/50 transition-colors group cursor-pointer">
       <td className="p-4 font-medium text-primary flex items-center gap-2">
-        <FileSearch size={16} className="text-muted group-hover:text-primary transition-colors" />
+        <FileSearch size={16} className="text-muted-foreground group-hover:text-primary transition-colors" />
         Sample {name.substring(0,8)}
       </td>
-      <td className="p-4 text-muted font-mono">{hash}</td>
-      <td className="p-4 text-muted">{score}</td>
+      <td className="p-4 text-muted-foreground font-mono">{hash}</td>
+      <td className="p-4 text-muted-foreground">{score}</td>
       <td className="p-4">
         <span className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wider ${status === 'MALICIOUS' ? 'bg-destructive/20 text-destructive border-destructive/30' : 'bg-primary/20 text-primary border-primary/30'}`}>
           {status}
@@ -125,3 +125,4 @@ function SampleRow({ name, hash, score, status }: { name: string, hash: string, 
     </tr>
   );
 }
+

@@ -1,52 +1,123 @@
+# MAP — PE Analyzer
+# Parses and extracts metadata from Windows Portable Executable files using pefile.
+
+import math
+import structlog
+from datetime import datetime, timezone
+from typing import Any, Dict, List
+
 import pefile
-from typing import Dict, Any, List
 
-def analyze_pe(file_path: str) -> Dict[str, Any]:
-    """Parse PE structure using pefile."""
-    try:
-        pe = pefile.PE(file_path)
-    except Exception as e:
-        return {"error": str(e)}
+logger = structlog.get_logger()
 
-    # Sections
-    sections = []
-    for section in pe.sections:
-        sections.append({
-            "name": section.Name.decode("utf-8", errors="ignore").strip('\x00'),
-            "virtual_address": hex(section.VirtualAddress),
-            "virtual_size": hex(section.Misc_VirtualSize),
-            "raw_size": section.SizeOfRawData,
-            "entropy": section.get_entropy()
-        })
 
-    # Imports
-    imports = {}
-    if hasattr(pe, "DIRECTORY_ENTRY_IMPORT"):
-        for entry in pe.DIRECTORY_ENTRY_IMPORT:
-            dll_name = entry.dll.decode("utf-8", errors="ignore")
-            imports[dll_name] = []
-            for imp in entry.imports:
-                if imp.name:
-                    imports[dll_name].append(imp.name.decode("utf-8", errors="ignore"))
+class PEAnalyzer:
+    """Extracts features from PE files."""
 
-    # Exports
-    exports = []
-    if hasattr(pe, "DIRECTORY_ENTRY_EXPORT"):
-        for exp in pe.DIRECTORY_ENTRY_EXPORT.symbols:
-            if exp.name:
-                exports.append(exp.name.decode("utf-8", errors="ignore"))
+    def __init__(self, file_data: bytes):
+        self.file_data = file_data
+        try:
+            self.pe = pefile.PE(data=file_data, fast_load=False)
+            self.is_valid = True
+        except pefile.PEFormatError as e:
+            logger.warning("Invalid PE format", error=str(e))
+            self.pe = None
+            self.is_valid = False
 
-    # Header info
-    headers = {
-        "machine": hex(pe.FILE_HEADER.Machine),
-        "time_date_stamp": pe.FILE_HEADER.TimeDateStamp,
-        "characteristics": hex(pe.FILE_HEADER.Characteristics)
-    }
+    def analyze(self) -> Dict[str, Any]:
+        """Perform full PE analysis."""
+        if not self.is_valid:
+            return {"error": "Invalid PE file"}
 
-    return {
-        "headers": headers,
-        "sections": sections,
-        "imports": imports,
-        "exports": exports,
-        "compiler": "Unknown" # Placeholder for advanced compiler detection
-    }
+        return {
+            "headers": self._extract_headers(),
+            "sections": self._extract_sections(),
+            "imports": self._extract_imports(),
+            "exports": self._extract_exports(),
+            "entry_point": hex(self.pe.OPTIONAL_HEADER.AddressOfEntryPoint) if hasattr(self.pe, 'OPTIONAL_HEADER') else None,
+            "image_base": hex(self.pe.OPTIONAL_HEADER.ImageBase) if hasattr(self.pe, 'OPTIONAL_HEADER') else None,
+            "timestamp": self._extract_timestamp(),
+        }
+
+    def _extract_headers(self) -> Dict[str, Any]:
+        """Extract basic PE headers."""
+        headers = {}
+        if hasattr(self.pe, 'FILE_HEADER'):
+            headers["machine"] = hex(self.pe.FILE_HEADER.Machine)
+            headers["characteristics"] = hex(self.pe.FILE_HEADER.Characteristics)
+        
+        if hasattr(self.pe, 'OPTIONAL_HEADER'):
+            headers["magic"] = hex(self.pe.OPTIONAL_HEADER.Magic)
+            headers["subsystem"] = hex(self.pe.OPTIONAL_HEADER.Subsystem)
+            headers["dll_characteristics"] = hex(self.pe.OPTIONAL_HEADER.DllCharacteristics)
+            
+        return headers
+
+    def _extract_sections(self) -> List[Dict[str, Any]]:
+        """Extract sections and their properties including entropy."""
+        sections = []
+        for section in self.pe.sections:
+            try:
+                name = section.Name.decode("utf-8", errors="replace").strip("\x00")
+            except Exception:
+                name = section.Name.hex()
+                
+            sections.append({
+                "name": name,
+                "virtual_address": hex(section.VirtualAddress),
+                "virtual_size": section.Misc_VirtualSize,
+                "raw_size": section.SizeOfRawData,
+                "entropy": round(section.get_entropy(), 4),
+                "characteristics": hex(section.Characteristics)
+            })
+        return sections
+
+    def _extract_imports(self) -> List[Dict[str, Any]]:
+        """Extract imported DLLs and their functions."""
+        imports = []
+        if hasattr(self.pe, 'DIRECTORY_ENTRY_IMPORT'):
+            for entry in self.pe.DIRECTORY_ENTRY_IMPORT:
+                try:
+                    dll_name = entry.dll.decode("utf-8", errors="replace")
+                except Exception:
+                    continue
+                    
+                functions = []
+                for imp in entry.imports:
+                    if imp.name:
+                        try:
+                            func_name = imp.name.decode("utf-8", errors="replace")
+                            functions.append(func_name)
+                        except Exception:
+                            pass
+                    elif imp.ordinal:
+                        functions.append(f"Ordinal{imp.ordinal}")
+                        
+                imports.append({
+                    "dll": dll_name,
+                    "functions": functions
+                })
+        return imports
+
+    def _extract_exports(self) -> List[str]:
+        """Extract exported functions."""
+        exports = []
+        if hasattr(self.pe, 'DIRECTORY_ENTRY_EXPORT'):
+            for exp in self.pe.DIRECTORY_ENTRY_EXPORT.symbols:
+                if exp.name:
+                    try:
+                        exports.append(exp.name.decode("utf-8", errors="replace"))
+                    except Exception:
+                        pass
+        return exports
+
+    def _extract_timestamp(self) -> str:
+        """Extract compilation timestamp."""
+        if hasattr(self.pe, 'FILE_HEADER'):
+            timestamp_val = self.pe.FILE_HEADER.TimeDateStamp
+            try:
+                dt = datetime.fromtimestamp(timestamp_val, tz=timezone.utc)
+                return dt.isoformat()
+            except Exception:
+                return "Invalid"
+        return "Unknown"

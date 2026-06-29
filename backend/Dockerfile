@@ -1,8 +1,6 @@
-# =============================================================================
-# MAP Backend — Multi-stage Dockerfile
-# =============================================================================
+# MAP — Backend Dockerfile
 
-# ---------- Stage 1: Builder ----------
+# Stage 1: Builder
 FROM python:3.12-slim AS builder
 
 WORKDIR /build
@@ -17,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY pyproject.toml .
 RUN pip install --no-cache-dir --prefix=/install .
 
-# ---------- Stage 2: Runtime ----------
+# Stage 2: Runtime
 FROM python:3.12-slim AS runtime
 
 # Security: non-root user

@@ -64,8 +64,6 @@ uploads/
 .DS_Store
 Thumbs.db
 
-# Alembic
-backend/alembic/versions/*.pyc
 
 # Logs
 *.log

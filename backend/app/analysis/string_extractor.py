@@ -1,40 +1,82 @@
-import re
-from typing import List, Dict
+# MAP — String Extractor
+# Extracts ASCII and Unicode strings from binaries and categorizes them.
 
-def extract_strings(content: bytes, min_length: int = 5) -> Dict[str, List[str]]:
-    """Extract ASCII and Unicode strings, and categorize them."""
-    
-    # ASCII strings
-    ascii_pattern = re.compile(b'[\x20-\x7e]{' + str(min_length).encode() + b',}')
-    ascii_strings = [s.decode('ascii') for s in ascii_pattern.findall(content)]
-    
-    # Unicode strings (utf-16-le)
-    unicode_pattern = re.compile(b'(?:[\x20-\x7e]\x00){' + str(min_length).encode() + b',}')
-    unicode_raw = unicode_pattern.findall(content)
-    unicode_strings = [s.decode('utf-16-le') for s in unicode_raw]
-    
-    all_strings = ascii_strings + unicode_strings
-    
-    # Categorization using regex
-    urls = []
-    ips = []
-    registry = []
-    
-    url_pattern = re.compile(r'https?://[^\s<>"]+|www\.[^\s<>"]+')
-    ip_pattern = re.compile(r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b')
-    reg_pattern = re.compile(r'(?i)(?:HKLM|HKCU|HKEY_LOCAL_MACHINE|HKEY_CURRENT_USER)\\[^\s]+')
-    
-    for s in all_strings:
-        if url_pattern.search(s):
-            urls.append(s)
-        if ip_pattern.search(s):
-            ips.append(s)
-        if reg_pattern.search(s):
-            registry.append(s)
-            
-    return {
-        "all_count": len(all_strings),
-        "urls": list(set(urls)),
-        "ips": list(set(ips)),
-        "registry": list(set(registry))
-    }
+import re
+from typing import Dict, List, Set
+
+
+class StringExtractor:
+    """Extracts strings and attempts to classify them as IPs, Domains, URLs, etc."""
+
+    def __init__(self, file_data: bytes, min_length: int = 5):
+        self.file_data = file_data
+        self.min_length = min_length
+        
+        # Pre-compile regexes
+        self.ascii_re = re.compile(b"[\x20-\x7E]{" + str(min_length).encode() + b",}")
+        self.unicode_re = re.compile(b"(?:[\x20-\x7E]\x00){" + str(min_length).encode() + b",}")
+        
+        self.url_re = re.compile(r"https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+")
+        self.ip_re = re.compile(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b")
+        self.registry_re = re.compile(r"(?:HKLM|HKCU|HKCR|HKU|HKCC|HKEY_LOCAL_MACHINE|HKEY_CURRENT_USER)\\[\\a-zA-Z0-9_\-]+")
+        self.file_path_re = re.compile(r"(?:[a-zA-Z]:\\|\b\\\\)[\\\w\-. ]+")
+
+    def extract(self) -> Dict[str, List[str]]:
+        """Extract strings and categorize them."""
+        # 1. Raw extraction
+        ascii_strings = [s.decode('ascii') for s in self.ascii_re.findall(self.file_data)]
+        unicode_strings = [s.decode('utf-16le') for s in self.unicode_re.findall(self.file_data)]
+        
+        all_strings = set(ascii_strings + unicode_strings)
+        
+        # 2. Categorization
+        categorized = {
+            "all": list(all_strings),
+            "urls": [],
+            "ips": [],
+            "registry": [],
+            "paths": [],
+            "suspicious": []
+        }
+        
+        # Filter sets to avoid duplicates
+        urls: Set[str] = set()
+        ips: Set[str] = set()
+        registry: Set[str] = set()
+        paths: Set[str] = set()
+        
+        suspicious_keywords = [
+            "cmd.exe", "powershell", "virtualalloc", "writeprocessmemory",
+            "createremotethread", "setwindowshook", "loadlibrary", "getprocaddress",
+            "vssadmin", "shadowcopy", "wevtutil", "schtasks", "wmi"
+        ]
+
+        for s in all_strings:
+            # URLs
+            for match in self.url_re.findall(s):
+                urls.add(match)
+                
+            # IPs
+            for match in self.ip_re.findall(s):
+                ips.add(match)
+                
+            # Registry
+            for match in self.registry_re.findall(s):
+                registry.add(match)
+                
+            # Paths
+            for match in self.file_path_re.findall(s):
+                if len(match) > 5: # Filter out very short noise
+                    paths.add(match)
+                    
+            # Suspicious
+            s_lower = s.lower()
+            if any(keyword in s_lower for keyword in suspicious_keywords):
+                categorized["suspicious"].append(s)
+
+        categorized["urls"] = list(urls)
+        categorized["ips"] = list(ips)
+        categorized["registry"] = list(registry)
+        categorized["paths"] = list(paths)
+        
+        return categorized

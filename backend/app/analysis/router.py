@@ -1,45 +1,46 @@
-import uuid
+# MAP — Static Analysis Router
+# FastAPI endpoints for static analysis.
+
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
-from app.core.dependencies import get_db
 from app.analysis.schemas import StaticAnalysisResponse
-from app.analysis.models import StaticAnalysisResult
 from app.analysis.service import analysis_service
-from app.samples.models import Sample
+from app.analysis.tasks import run_static_analysis
+from app.core.dependencies import get_authenticated_user, get_db
+from app.samples.service import sample_service
 
-router = APIRouter(prefix="/analysis", tags=["Analysis"])
+router = APIRouter(prefix="/analysis/static", tags=["Analysis"])
 
-@router.post("/static/{sample_id}", response_model=StaticAnalysisResponse)
-async def trigger_static_analysis(
-    sample_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db)
+
+@router.post("/{sample_id}", status_code=status.HTTP_202_ACCEPTED)
+async def trigger_analysis(
+    sample_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_authenticated_user),
 ):
-    """Manually trigger static analysis for a sample."""
-    try:
-        # In a real app this would trigger a Celery task.
-        # For simplicity in this iteration, we run it synchronously.
-        result = await analysis_service.run_static_analysis(str(sample_id), db)
-        return result
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
-
-
-@router.get("/static/{sample_id}", response_model=StaticAnalysisResponse)
-async def get_static_analysis(
-    sample_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db)
-):
-    """Retrieve static analysis results for a sample."""
-    result = await db.execute(
-        select(StaticAnalysisResult).where(StaticAnalysisResult.sample_id == sample_id)
-    )
-    analysis = result.scalars().first()
-    
-    if not analysis:
-        raise HTTPException(status_code=404, detail="Analysis results not found")
+    """Trigger static analysis for a sample."""
+    sample = await sample_service.get_sample_by_id(db, sample_id)
+    if not sample:
+        raise HTTPException(status_code=404, detail="Sample not found")
         
-    return analysis
+    run_static_analysis.delay(str(sample.id))
+    return {"message": "Static analysis task queued", "sample_id": sample_id}
+
+
+@router.get("/{sample_id}", response_model=StaticAnalysisResponse)
+async def get_analysis(
+    sample_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_authenticated_user),
+):
+    """Get static analysis results for a sample."""
+    result = await analysis_service.get_analysis_by_sample_id(db, sample_id)
+    if not result:
+        raise HTTPException(
+            status_code=404, 
+            detail="Analysis results not found. Analysis may still be pending."
+        )
+    return result

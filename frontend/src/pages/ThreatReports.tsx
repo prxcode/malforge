@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Activity, Search } from 'lucide-react';
 
 export function ThreatReports() {
@@ -27,16 +27,16 @@ export function ThreatReports() {
           <Activity className="text-primary" />
           Threat Intelligence Reports
         </h2>
-        <p className="text-muted mt-1 text-sm">Fetch full forensic report via GET /api/v1/report/&#123;hash&#125;.</p>
+        <p className="text-muted-foreground mt-1 text-sm">Fetch full forensic report via GET /api/v1/report/&#123;hash&#125;.</p>
       </header>
 
-      <div className="bg-card p-4 rounded-xl border border-white/5 flex gap-4">
+      <div className="bg-card p-4 rounded-xl border border-border flex gap-4">
         <input 
           type="text" 
           placeholder="Enter SHA256 Hash..." 
           value={hash}
           onChange={e => setHash(e.target.value)}
-          className="flex-1 bg-background border border-white/10 rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-primary transition-colors font-mono"
+          className="flex-1 bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-primary transition-colors font-mono"
         />
         <button 
           onClick={fetchReport}

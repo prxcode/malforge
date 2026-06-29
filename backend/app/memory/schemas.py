@@ -1,23 +1,34 @@
-import uuid
-from datetime import datetime
-from typing import Dict, Any, List, Optional
-from pydantic import BaseModel
+# MAP — Memory Schemas
+# Pydantic models for memory forensics analysis.
 
-class MemoryAnalysisBase(BaseModel):
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict
+
+
+class MemoryAnalysisResponse(BaseModel):
+    """Full memory analysis response schema."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    sample_id: UUID
+    
+    os_profile: Optional[str] = None
+    analysis_status: str
+    error_message: Optional[str] = None
+    
     processes: List[Dict[str, Any]] = []
+    process_tree: Dict[str, Any] = {}
     modules: List[Dict[str, Any]] = []
+    registry: List[Dict[str, Any]] = []
+    services: List[Dict[str, Any]] = []
     network_connections: List[Dict[str, Any]] = []
-    registry_keys: List[Dict[str, Any]] = []
+    handles: List[Dict[str, Any]] = []
+    command_history: List[Dict[str, Any]] = []
     injected_memory: List[Dict[str, Any]] = []
     timeline: List[Dict[str, Any]] = []
-
-class MemoryAnalysisCreate(MemoryAnalysisBase):
-    sample_id: uuid.UUID
-
-class MemoryAnalysisResponse(MemoryAnalysisBase):
-    id: uuid.UUID
-    sample_id: uuid.UUID
-    completed_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
+    
+    created_at: datetime
+    updated_at: datetime

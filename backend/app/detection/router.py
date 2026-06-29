@@ -1,48 +1,73 @@
-import uuid
+# MAP — Detection Router
+# FastAPI endpoints for detection engineering.
+
+from typing import List
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.core.dependencies import get_db
-from app.detection.schemas import DetectionRuleListResponse
+from app.core.dependencies import get_authenticated_user, get_db
 from app.detection.models import DetectionRule
+from app.detection.schemas import DetectionRuleListResponse, DetectionRuleResponse, ValidationResultResponse
 from app.detection.service import detection_service
+from app.samples.models import Sample
 
-router = APIRouter(prefix="/rules", tags=["Detection Rules"])
+router = APIRouter(prefix="/rules", tags=["Detection Engineering"])
 
-@router.post("/generate/{sample_id}", status_code=status.HTTP_201_CREATED)
-async def generate_rules_for_sample(
-    sample_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db)
+
+@router.get("/sample/{sample_id}", response_model=DetectionRuleListResponse)
+async def get_rules_for_sample(
+    sample_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_authenticated_user),
 ):
-    """Generate YARA and Sigma rules for a sample."""
-    try:
-        rules = await detection_service.generate_rules(str(sample_id), db)
-        return {"message": f"Generated {len(rules)} rules", "count": len(rules)}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    """Get all detection rules generated for a specific sample."""
+    items, total = await detection_service.list_rules_for_sample(db, sample_id)
+    
+    return DetectionRuleListResponse(
+        items=items,
+        total=total,
+    )
 
-@router.get("/{sample_id}", response_model=DetectionRuleListResponse)
-async def get_sample_rules(
-    sample_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db)
+
+@router.post("/generate/{sample_id}", response_model=List[DetectionRuleResponse])
+async def generate_rules(
+    sample_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_authenticated_user),
 ):
-    """Get all rules generated for a specific sample."""
-    from sqlalchemy import func
+    """Manually trigger generation of detection rules for a sample."""
+    result = await db.execute(select(Sample).where(Sample.id == sample_id))
+    sample = result.scalar_one_or_none()
     
-    # Count total
-    total_result = await db.execute(
-        select(func.count(DetectionRule.id)).where(DetectionRule.sample_id == sample_id)
-    )
-    total = total_result.scalar_one()
+    if not sample:
+        raise HTTPException(status_code=404, detail="Sample not found")
+        
+    rules = await detection_service.generate_rules(db, sample)
+    return rules
+
+
+@router.post("/validate/{rule_id}", response_model=ValidationResultResponse)
+async def validate_rule(
+    rule_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_authenticated_user),
+):
+    """Run validation testing on a specific rule."""
+    result = await db.execute(select(DetectionRule).where(DetectionRule.id == rule_id))
+    rule = result.scalar_one_or_none()
     
-    # Get items
-    result = await db.execute(
-        select(DetectionRule).where(DetectionRule.sample_id == sample_id)
-    )
-    items = result.scalars().all()
+    if not rule:
+        raise HTTPException(status_code=404, detail="Rule not found")
+        
+    val_result = await detection_service.validate_rule(db, rule)
     
-    return {
-        "items": items,
-        "total": total
-    }
+    if not val_result:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Validation failed or not supported for this rule type"
+        )
+        
+    return val_result

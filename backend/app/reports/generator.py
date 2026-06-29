@@ -1,36 +1,85 @@
-from typing import Dict, Any, List
+# MAP — Threat Report Generator
+# Aggregates data across all domains to generate a comprehensive threat intelligence report.
 
-class ReportGenerator:
-    def generate_executive_summary(self, sample_name: str, ioc_count: int, rule_count: int) -> str:
-        """Auto-generate an executive summary."""
-        return (
-            f"The sample '{sample_name}' was analyzed by MAP. "
-            f"During the analysis, {ioc_count} potential indicators of compromise were extracted. "
-            f"Additionally, {rule_count} detection rules (YARA/Sigma) were successfully generated "
-            f"to help identify this threat in the environment."
-        )
+from typing import Dict, List, Any
 
-    def generate_attack_mapping(self, heuristics: List[Dict[str, str]]) -> List[Dict[str, str]]:
-        """Map heuristics to MITRE ATT&CK."""
-        mapping = []
-        for flag in heuristics:
-            name = flag.get("name", "")
-            if "Packed" in name:
-                mapping.append({"id": "T1027.002", "tactic": "Defense Evasion", "technique": "Software Packing"})
-            if "Suspicious Imports" in name:
-                mapping.append({"id": "T1055", "tactic": "Defense Evasion", "technique": "Process Injection"})
-                
-        if not mapping:
-            mapping.append({"id": "Unknown", "tactic": "Unknown", "technique": "No clear ATT&CK mapping found"})
+class ThreatReportGenerator:
+    """Generates structured threat intelligence reports."""
+
+    def generate(
+        self, 
+        sample_meta: Dict[str, Any],
+        static_analysis: Dict[str, Any] | None,
+        memory_analysis: Dict[str, Any] | None,
+        iocs: List[Dict[str, Any]],
+        rules: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Aggregate analysis data into a structured threat report."""
+        
+        # 1. File Metadata
+        file_metadata = {
+            "filename": sample_meta.get("filename"),
+            "sha256": sample_meta.get("sha256"),
+            "md5": sample_meta.get("md5"),
+            "size": sample_meta.get("file_size"),
+            "type": sample_meta.get("file_type")
+        }
+        
+        # 2. Malware Characteristics & ATT&CK Mapping
+        characteristics = {"capabilities": [], "heuristics": []}
+        attack_mapping = []
+        
+        if static_analysis:
+            characteristics["entropy"] = static_analysis.get("entropy_score")
+            characteristics["compiler"] = static_analysis.get("compiler")
             
-        return mapping
-
-    def generate_recommendations(self) -> List[str]:
-        return [
-            "Isolate infected hosts from the network immediately.",
-            "Deploy the generated YARA rules to your EDR solution.",
-            "Block the extracted IOCs (IPs, Domains) on the perimeter firewall.",
-            "Reset credentials for any users logged into the affected machines."
-        ]
-
-report_generator = ReportGenerator()
+            for flag in static_analysis.get("heuristic_flags", []):
+                characteristics["heuristics"].append(flag["name"])
+                
+                # Simple ATT&CK mapping based on heuristics
+                if "Injection" in flag["name"]:
+                    attack_mapping.append({"id": "T1055", "name": "Process Injection", "tactic": "Defense Evasion"})
+                elif "Keylog" in flag["name"]:
+                    attack_mapping.append({"id": "T1056.001", "name": "Keylogging", "tactic": "Collection"})
+                elif "Packed" in flag["name"] or "Entropy" in flag["name"]:
+                    attack_mapping.append({"id": "T1027.002", "name": "Software Packing", "tactic": "Defense Evasion"})
+                    
+        # 3. IOC Summary
+        ioc_counts = {}
+        for ioc in iocs:
+            itype = ioc["indicator_type"]
+            ioc_counts[itype] = ioc_counts.get(itype, 0) + 1
+            
+        # 4. Executive Summary
+        severity = "High" if (static_analysis and static_analysis.get("heuristic_score", 0) > 7.0) else "Medium"
+        summary = f"Analysis of {file_metadata['filename']} (SHA256: {file_metadata['sha256'][:8]}...) indicates a {severity.lower()} threat level."
+        if attack_mapping:
+            tactics = list(set([m["tactic"] for m in attack_mapping]))
+            summary += f" The sample exhibits behaviors associated with {', '.join(tactics)}."
+            
+        # 5. Build full report structure
+        report = {
+            "executive_summary": summary,
+            "confidence_level": severity.lower(),
+            "file_metadata": file_metadata,
+            "malware_characteristics": characteristics,
+            "attack_mapping": attack_mapping,
+            "observed_indicators": [
+                {"type": ioc["indicator_type"], "value": ioc["value"], "confidence": ioc["confidence"]} 
+                for ioc in iocs[:50] # Cap at top 50 for report summary
+            ],
+            "ioc_summary": ioc_counts,
+            "detection_opportunities": [
+                {"description": "Monitor for process injection APIs", "log_source": "API Monitoring"},
+                {"description": "Monitor network connections to extracted IPs/Domains", "log_source": "Firewall/DNS"}
+            ],
+            "recommendations": [
+                {"action": "Block IOCs", "description": "Block all extracted IPs and Domains at the perimeter."}
+            ],
+            "rule_references": [
+                {"rule_name": rule["rule_name"], "type": rule["rule_type"]} 
+                for rule in rules
+            ]
+        }
+        
+        return report

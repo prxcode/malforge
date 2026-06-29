@@ -1,16 +1,15 @@
 import pytest
+from contextlib import asynccontextmanager
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
 
 from app.main import app
-from app.core.database import Base
-from app.core.dependencies import get_db
 
-# Basic test configuration for Pytest
-# In a real scenario, this would configure an in-memory SQLite DB
-# or a separate test PostgreSQL instance.
+# Mock lifespan to prevent DB and MinIO connections during tests without a real backend
+@asynccontextmanager
+async def mock_lifespan(app):
+    yield
 
+app.router.lifespan_context = mock_lifespan
 client = TestClient(app)
 
 def test_health_check():

@@ -1,8 +1,5 @@
-"""
-MAP — Celery Worker Configuration
-
-Configures the Celery app for background tasks.
-"""
+# MAP — Celery Worker Configuration
+# Configures the Celery app for background tasks.
 
 from celery import Celery
 

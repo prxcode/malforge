@@ -1,6 +1,4 @@
--- =============================================================================
--- MAP — PostgreSQL Initialization Script
--- =============================================================================
+-- MAP — Database Initialization
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

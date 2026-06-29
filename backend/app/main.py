@@ -9,16 +9,28 @@ import structlog
 
 from app.core.config import get_settings
 from app.core.storage import storage_service
+from app.core.database import engine, Base
 from app.auth.router import router as auth_router
 
 settings = get_settings()
 logger = structlog.get_logger()
+
+# Import models to ensure they are registered with Base.metadata before create_all
+from app.samples.models import Sample  # noqa: F401
+from app.analysis.models import StaticAnalysis, MemoryAnalysis  # noqa: F401
+from app.ioc.models import ExtractedIOC  # noqa: F401
+from app.detection.models import DetectionRule  # noqa: F401
+from app.reports.models import ThreatReport  # noqa: F401
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifecycle events for the FastAPI application."""
     logger.info("Starting up MAP API...")
+    
+    # Create all database tables automatically (replaces Alembic)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     
     # Initialize storage (MinIO with local fallback)
     await storage_service.initialize()

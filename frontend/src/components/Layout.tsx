@@ -11,11 +11,11 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden text-foreground transition-colors duration-300">
       {/* Sidebar */}
-      <aside className="w-64 flex-shrink-0 bg-card border-r border-white/10 flex flex-col h-full relative z-20 transition-colors duration-300">
-        <div className="p-6 border-b border-white/10 flex items-center justify-between">
+      <aside className="w-64 flex-shrink-0 bg-card border-r border-border flex flex-col h-full relative z-20 transition-colors duration-300">
+        <div className="p-6 border-b border-border flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-wider text-primary">MAP</h1>
-            <p className="text-[10px] text-muted mt-1 uppercase font-semibold">Malware Analysis Platform</p>
+            <p className="text-[10px] text-muted-foreground mt-1 uppercase font-semibold">Malware Analysis Platform</p>
           </div>
         </div>
         
@@ -28,7 +28,7 @@ export function Layout({ children }: LayoutProps) {
           <NavItem to="/reports" label="Threat Reports" icon={<Activity size={18} />} />
         </nav>
         
-        <div className="p-4 border-t border-white/10 text-[10px] text-muted text-center flex justify-center items-center font-mono uppercase tracking-wider">
+        <div className="p-4 border-t border-border text-[10px] text-muted-foreground text-center flex justify-center items-center font-mono uppercase tracking-wider">
           <span>MAP v1.0.0 • Made by @prxcode</span>
         </div>
       </aside>
@@ -36,7 +36,7 @@ export function Layout({ children }: LayoutProps) {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col relative overflow-hidden bg-background transition-colors duration-300">
         {/* Header Strip with Theme Toggle */}
-        <div className="h-14 border-b border-white/5 flex items-center justify-end px-6">
+        <div className="h-14 border-b border-border flex items-center justify-end px-6">
           <ThemeToggle />
         </div>
         
@@ -55,7 +55,7 @@ function NavItem({ label, icon, to }: { label: string, icon: React.ReactNode, to
       className={({ isActive }) => `flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
         isActive 
           ? 'bg-primary/10 text-primary font-medium' 
-          : 'text-muted hover:bg-white/5 hover:text-foreground'
+          : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
       }`}
     >
       {icon}
@@ -63,3 +63,4 @@ function NavItem({ label, icon, to }: { label: string, icon: React.ReactNode, to
     </NavLink>
   );
 }
+

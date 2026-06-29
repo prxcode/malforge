@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ShieldAlert, RefreshCw, FileCode } from 'lucide-react';
 
 export function DetectionRules() {
@@ -32,17 +32,17 @@ export function DetectionRules() {
             <ShieldAlert className="text-primary" />
             Detection Rules Engine
           </h2>
-          <p className="text-muted mt-1 text-sm">Generate rules automatically via POST /api/v1/detection/generate-rule.</p>
+          <p className="text-muted-foreground mt-1 text-sm">Generate rules automatically via POST /api/v1/detection/generate-rule.</p>
         </div>
       </header>
 
-      <div className="bg-card p-4 rounded-xl border border-white/5 flex gap-4">
+      <div className="bg-card p-4 rounded-xl border border-border flex gap-4">
         <input 
           type="text" 
           placeholder="Enter Sample UUID..." 
           value={sampleId}
           onChange={e => setSampleId(e.target.value)}
-          className="flex-1 bg-background border border-white/10 rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-primary transition-colors font-mono"
+          className="flex-1 bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-primary transition-colors font-mono"
         />
         <button 
           onClick={handleGenerate}
@@ -57,25 +57,25 @@ export function DetectionRules() {
       {rules && (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <div className="glass p-6 rounded-xl flex flex-col h-full">
-            <div className="flex justify-between items-center border-b border-white/5 pb-4 mb-4">
+            <div className="flex justify-between items-center border-b border-border pb-4 mb-4">
               <h3 className="font-semibold text-lg flex items-center gap-2">
                 <FileCode size={18} className="text-yellow-500" />
                 Generated YARA Rule
               </h3>
             </div>
-            <pre className="bg-background border border-white/10 rounded-lg p-4 font-mono text-sm text-muted overflow-y-auto flex-1 whitespace-pre-wrap">
+            <pre className="bg-background border border-border rounded-lg p-4 font-mono text-sm text-muted-foreground overflow-y-auto flex-1 whitespace-pre-wrap">
               {rules.yara_rule || "// No YARA rule generated"}
             </pre>
           </div>
 
           <div className="glass p-6 rounded-xl flex flex-col h-full">
-            <div className="flex justify-between items-center border-b border-white/5 pb-4 mb-4">
+            <div className="flex justify-between items-center border-b border-border pb-4 mb-4">
               <h3 className="font-semibold text-lg flex items-center gap-2">
                 <FileCode size={18} className="text-blue-500" />
                 Generated Sigma Rule
               </h3>
             </div>
-            <pre className="bg-background border border-white/10 rounded-lg p-4 font-mono text-sm text-muted overflow-y-auto flex-1 whitespace-pre-wrap">
+            <pre className="bg-background border border-border rounded-lg p-4 font-mono text-sm text-muted-foreground overflow-y-auto flex-1 whitespace-pre-wrap">
               {rules.sigma_rule || "# No Sigma rule generated"}
             </pre>
           </div>
