@@ -1,0 +1,1 @@
+"""MAP Detection Module."""

@@ -1,0 +1,1 @@
+"""MAP Core Module."""

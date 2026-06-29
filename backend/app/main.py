@@ -1,0 +1,94 @@
+# main.py
+
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
+import structlog
+
+from app.core.config import get_settings
+from app.core.storage import storage_service
+from app.auth.router import router as auth_router
+
+settings = get_settings()
+logger = structlog.get_logger()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifecycle events for the FastAPI application."""
+    logger.info("Starting up MAP API...")
+    
+    # Initialize storage (MinIO with local fallback)
+    await storage_service.initialize()
+    
+    yield
+    
+    logger.info("Shutting down MAP API...")
+
+
+def create_app() -> FastAPI:
+    """Application factory."""
+    app = FastAPI(
+        title=settings.app_name,
+        version=settings.app_version,
+        openapi_url=f"{settings.api_prefix}/openapi.json",
+        docs_url=f"{settings.api_prefix}/docs",
+        redoc_url=f"{settings.api_prefix}/redoc",
+        lifespan=lifespan,
+    )
+
+    # CORS configuration
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # Include routers
+    app.include_router(auth_router, prefix=settings.api_prefix)
+    
+    from app.samples.router import router as samples_router
+    app.include_router(samples_router, prefix=settings.api_prefix)
+    
+    from app.analysis.router import router as analysis_router
+    app.include_router(analysis_router, prefix=settings.api_prefix)
+    
+    from app.ioc.router import router as ioc_router
+    app.include_router(ioc_router, prefix=settings.api_prefix)
+    
+    from app.detection.router import router as detection_router
+    app.include_router(detection_router, prefix=settings.api_prefix)
+    
+    from app.memory.router import router as memory_router
+    app.include_router(memory_router, prefix=settings.api_prefix)
+    
+    from app.reports.router import router as reports_router
+    app.include_router(reports_router, prefix=settings.api_prefix)
+    
+    from app.orchestrator.router import router as orchestrator_router
+    app.include_router(orchestrator_router, prefix=settings.api_prefix)
+    
+    # All core routers are now included.
+
+    @app.get("/", include_in_schema=False)
+    async def root():
+        """Redirect root to API documentation."""
+        return RedirectResponse(url=f"{settings.api_prefix}/docs")
+
+    @app.get("/health", tags=["System"])
+    async def health_check():
+        """Basic health check endpoint."""
+        return {
+            "status": "ok",
+            "service": settings.app_name,
+            "version": settings.app_version,
+        }
+
+    return app
+
+
+app = create_app()

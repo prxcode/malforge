@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: var(--bg-color);
+  --color-foreground: var(--fg-color);
+  --color-card: var(--card-color);
+  --color-card-foreground: var(--card-fg-color);
+  --color-primary: var(--primary-color);
+  --color-primary-foreground: var(--primary-fg-color);
+  --color-secondary: var(--secondary-color);
+  --color-muted: var(--muted-color);
+  --color-accent: var(--accent-color);
+  --color-destructive: var(--destructive-color);
+}
+
+:root {
+  /* Monochrome Dark */
+  --bg-color: #0a0a0a;
+  --fg-color: #ededed;
+  --card-color: #141414;
+  --card-fg-color: #ededed;
+  --primary-color: #ffffff;
+  --primary-fg-color: #000000;
+  --secondary-color: #262626;
+  --muted-color: #8c8c8c;
+  --accent-color: #404040;
+  --destructive-color: #ef4444;
+}
+
+:root.light {
+  /* Monochrome Light */
+  --bg-color: #ffffff;
+  --fg-color: #0a0a0a;
+  --card-color: #f5f5f5;
+  --card-fg-color: #0a0a0a;
+  --primary-color: #000000;
+  --primary-fg-color: #ffffff;
+  --secondary-color: #e5e5e5;
+  --muted-color: #737373;
+  --accent-color: #a3a3a3;
+  --destructive-color: #dc2626;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  
+  * {
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+  }
+}
+
+@utility glass {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-secondary);
+}
