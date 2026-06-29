@@ -1,47 +1,83 @@
-import uuid
-from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
+# MAP — Memory Analysis Service
+# Orchestrates Volatility 3 execution on memory dumps.
+
+from uuid import UUID
+
+import structlog
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.memory.models import MemoryAnalysisResult
-from app.memory.vol3_adapter import vol3_adapter
 from app.core.storage import storage_service
-from app.samples.models import Sample
+from app.memory.models import MemoryAnalysisResult
+from app.memory.vol3_adapter import Volatility3Adapter
+from app.samples.models import Sample, SampleStatus
 
-class MemoryService:
-    @staticmethod
-    async def run_memory_analysis(sample_id: str, session: AsyncSession) -> MemoryAnalysisResult:
-        sample_uuid = uuid.UUID(sample_id)
+logger = structlog.get_logger()
+
+
+class MemoryAnalysisService:
+    """Service for running memory forensics on samples."""
+
+    async def get_analysis_by_sample_id(self, db: AsyncSession, sample_id: UUID) -> MemoryAnalysisResult | None:
+        """Retrieve memory analysis results for a sample."""
+        result = await db.execute(
+            select(MemoryAnalysisResult).where(MemoryAnalysisResult.sample_id == sample_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def run_analysis(self, db: AsyncSession, sample: Sample) -> MemoryAnalysisResult:
+        """Run memory analysis on a memory dump file."""
         
-        # Get sample
-        result = await session.execute(select(Sample).where(Sample.id == sample_uuid))
-        sample = result.scalars().first()
-        
-        if not sample:
-            raise ValueError(f"Sample {sample_id} not found")
+        if sample.file_type != "memory_dump":
+            raise ValueError(f"Sample {sample.id} is not a memory dump.")
             
-        # Note: In a real system, we'd fetch the memory dump file.
-        # Here we mock the dump path
-        dump_path = "/tmp/mock_dump.vmem"
+        # Ensure we have the file available locally for Volatility
+        # Volatility works best with actual filesystem paths
+        file_path = storage_service._get_object_path(sample.sha256, sample.filename)
+        
+        # NOTE: In a true MinIO-only environment, we would need to download the dump
+        # to a temporary local file first. For this implementation, we assume local fallback works.
+        # A robust solution downloads it if necessary.
         
         # Run Volatility
-        vol_results = vol3_adapter.analyze_memory_dump(dump_path)
+        adapter = Volatility3Adapter(file_path)
+        analysis_data = adapter.analyze()
         
-        analysis = MemoryAnalysisResult(
-            sample_id=sample_uuid,
-            processes=vol_results.get("processes", []),
-            modules=vol_results.get("modules", []),
-            network_connections=vol_results.get("network_connections", []),
-            injected_memory=[],
-            registry=[],
-            timeline=[],
-            completed_at=datetime.utcnow()
+        status = analysis_data.get("status", "failed")
+        error_msg = analysis_data.get("error")
+        
+        result = MemoryAnalysisResult(
+            sample_id=sample.id,
+            analysis_status=status,
+            error_message=error_msg,
+            os_profile=analysis_data.get("os_profile"),
+            processes=analysis_data.get("processes", []),
+            process_tree=analysis_data.get("process_tree", {}),
+            modules=analysis_data.get("modules", []),
+            registry=analysis_data.get("registry", []),
+            services=analysis_data.get("services", []),
+            network_connections=analysis_data.get("network_connections", []),
+            handles=analysis_data.get("handles", []),
+            command_history=analysis_data.get("command_history", []),
+            injected_memory=analysis_data.get("injected_memory", []),
+            timeline=analysis_data.get("timeline", [])
         )
+            
+        # Update existing or add new
+        existing = await self.get_analysis_by_sample_id(db, sample.id)
+        if existing:
+            await db.delete(existing)
+            await db.flush()
+            
+        db.add(result)
         
-        session.add(analysis)
-        await session.commit()
-        await session.refresh(analysis)
+        # Update sample status
+        sample.status = SampleStatus.COMPLETED if status == "completed" else SampleStatus.FAILED
         
-        return analysis
+        await db.commit()
+        await db.refresh(result)
+        
+        return result
 
-memory_service = MemoryService()
+
+memory_service = MemoryAnalysisService()

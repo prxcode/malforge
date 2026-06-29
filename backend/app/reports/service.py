@@ -1,66 +1,115 @@
-import uuid
+# MAP — Threat Report Service
+# Orchestrates generation of threat reports.
+
+from uuid import UUID
+from typing import List, Tuple
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
-from app.reports.models import ThreatReport
-from app.reports.generator import report_generator
-from app.samples.models import Sample
-from app.ioc.models import IOCEntry
-from app.detection.models import DetectionRule
 from app.analysis.models import StaticAnalysisResult
+from app.detection.models import DetectionRule
+from app.ioc.models import IOCEntry
+from app.memory.models import MemoryAnalysisResult
+from app.reports.generator import ThreatReportGenerator
+from app.reports.models import ThreatReport
+from app.samples.models import Sample
 
-class ReportService:
-    @staticmethod
-    async def generate_report(sample_id: str, session: AsyncSession) -> ThreatReport:
-        sample_uuid = uuid.UUID(sample_id)
-        
-        # 1. Fetch sample
-        sample_res = await session.execute(select(Sample).where(Sample.id == sample_uuid))
-        sample = sample_res.scalars().first()
-        if not sample:
-            raise ValueError("Sample not found")
 
-        # 2. Fetch IOCs
-        ioc_res = await session.execute(select(IOCEntry).where(IOCEntry.sample_id == sample_uuid))
-        iocs = ioc_res.scalars().all()
+class ThreatReportService:
+    """Service for managing threat reports."""
+
+    def __init__(self):
+        self.generator = ThreatReportGenerator()
+
+    async def get_report_by_sample_id(self, db: AsyncSession, sample_id: UUID) -> ThreatReport | None:
+        """Retrieve threat report for a sample."""
+        result = await db.execute(
+            select(ThreatReport).where(ThreatReport.sample_id == sample_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def list_reports(self, db: AsyncSession, skip: int = 0, limit: int = 20) -> Tuple[List[ThreatReport], int]:
+        """List all threat reports."""
+        query = select(ThreatReport)
         
-        # 3. Fetch Rules
-        rules_res = await session.execute(select(DetectionRule).where(DetectionRule.sample_id == sample_uuid))
-        rules = rules_res.scalars().all()
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await db.execute(count_query)
+        total = total_result.scalar_one()
+
+        query = query.order_by(ThreatReport.created_at.desc()).offset(skip).limit(limit)
+        result = await db.execute(query)
         
-        # 4. Fetch Analysis
-        analysis_res = await session.execute(select(StaticAnalysisResult).where(StaticAnalysisResult.sample_id == sample_uuid))
-        analysis = analysis_res.scalars().first()
+        return list(result.scalars().all()), total
+
+    async def generate_report(self, db: AsyncSession, sample: Sample) -> ThreatReport:
+        """Generate a threat report for a sample by aggregating all related data."""
         
-        heuristics = analysis.heuristic_flags if analysis else []
+        # 1. Gather Sample Meta
+        sample_meta = {
+            "filename": sample.filename,
+            "sha256": sample.sha256,
+            "md5": sample.md5,
+            "file_size": sample.file_size,
+            "file_type": sample.file_type.value if sample.file_type else "unknown"
+        }
         
-        # Generate content
-        exec_summary = report_generator.generate_executive_summary(sample.filename, len(iocs), len(rules))
-        attack_mapping = report_generator.generate_attack_mapping(heuristics)
-        recommendations = report_generator.generate_recommendations()
+        # 2. Gather Static Analysis
+        static_result = await db.execute(select(StaticAnalysisResult).where(StaticAnalysisResult.sample_id == sample.id))
+        static = static_result.scalar_one_or_none()
+        static_dict = {
+            "entropy_score": static.entropy_score,
+            "compiler": static.compiler,
+            "heuristic_score": static.heuristic_score,
+            "heuristic_flags": static.heuristic_flags
+        } if static else None
         
-        # Calculate IOC summary
-        ioc_summary = {}
-        for ioc in iocs:
-            ioc_summary[ioc.indicator_type] = ioc_summary.get(ioc.indicator_type, 0) + 1
-            
+        # 3. Gather Memory Analysis
+        mem_result = await db.execute(select(MemoryAnalysisResult).where(MemoryAnalysisResult.sample_id == sample.id))
+        mem = mem_result.scalar_one_or_none()
+        mem_dict = {
+            "os_profile": mem.os_profile
+        } if mem else None
+        
+        # 4. Gather IOCs
+        ioc_result = await db.execute(
+            select(IOCEntry).where(IOCEntry.sample_id == sample.id).order_by(IOCEntry.confidence.desc())
+        )
+        iocs = [{"indicator_type": ioc.indicator_type.value, "value": ioc.value, "confidence": ioc.confidence} 
+                for ioc in ioc_result.scalars().all()]
+                
+        # 5. Gather Rules
+        rule_result = await db.execute(select(DetectionRule).where(DetectionRule.sample_id == sample.id))
+        rules = [{"rule_name": r.rule_name, "rule_type": r.rule_type.value} for r in rule_result.scalars().all()]
+        
+        # 6. Generate Report
+        report_data = self.generator.generate(sample_meta, static_dict, mem_dict, iocs, rules)
+        
         report = ThreatReport(
-            sample_id=sample_uuid,
-            executive_summary=exec_summary,
-            file_metadata={"filename": sample.filename, "size": sample.size, "sha256": sample.sha256},
-            malware_characteristics={"entropy": getattr(analysis, 'entropy_score', None)},
-            attack_mapping=attack_mapping,
-            observed_indicators=[{"type": i.indicator_type, "value": i.value} for i in iocs[:10]],
-            detection_opportunities=[{"rule_type": r.rule_type, "name": r.rule_name} for r in rules],
-            recommendations=recommendations,
-            ioc_summary=ioc_summary,
-            rule_references=[r.rule_name for r in rules],
-            confidence_level="high" if heuristics else "medium"
+            sample_id=sample.id,
+            executive_summary=report_data["executive_summary"],
+            confidence_level=report_data["confidence_level"],
+            file_metadata=report_data["file_metadata"],
+            malware_characteristics=report_data["malware_characteristics"],
+            attack_mapping=report_data["attack_mapping"],
+            observed_indicators=report_data["observed_indicators"],
+            ioc_summary=report_data["ioc_summary"],
+            detection_opportunities=report_data["detection_opportunities"],
+            recommendations=report_data["recommendations"],
+            rule_references=report_data["rule_references"]
         )
         
-        session.add(report)
-        await session.commit()
-        await session.refresh(report)
+        # Delete existing if any
+        existing = await self.get_report_by_sample_id(db, sample.id)
+        if existing:
+            await db.delete(existing)
+            await db.flush()
+            
+        db.add(report)
+        await db.commit()
+        await db.refresh(report)
+        
         return report
 
-report_service = ReportService()
+
+report_service = ThreatReportService()

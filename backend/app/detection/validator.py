@@ -1,49 +1,49 @@
+# MAP — Detection Validator
+# Validates generated YARA rules by compiling them and running them against the sample.
+
 import yara
+import structlog
 from typing import Dict, Any
 
-class RuleValidator:
-    def validate_yara(self, rule_text: str) -> Dict[str, Any]:
-        """Validate YARA rule syntax by compiling it."""
+logger = structlog.get_logger()
+
+
+class DetectionValidator:
+    """Validates and tests detection rules."""
+
+    def validate_yara(self, rule_text: str, test_file_data: bytes) -> Dict[str, Any]:
+        """
+        Compile the YARA rule and run it against the provided file data.
+        Returns validation metrics.
+        """
+        result = {
+            "is_valid": False,
+            "true_positive": False,
+            "error": None,
+            "matches": []
+        }
+        
         try:
-            compiler = yara.compile(source=rule_text)
-            return {
-                "valid": True,
-                "error": None,
-                "warnings": []
-            }
+            # Test 1: Syntax compilation
+            compiled_rule = yara.compile(source=rule_text)
+            result["is_valid"] = True
+            
+            # Test 2: True positive against the generating sample
+            matches = compiled_rule.match(data=test_file_data)
+            
+            if matches:
+                result["true_positive"] = True
+                for match in matches:
+                    result["matches"].append({
+                        "rule": match.rule,
+                        "strings": [(s[0], s[1], s[2][:20]) for s in match.strings] # offset, string_id, partial_data
+                    })
+                    
         except yara.SyntaxError as e:
-            return {
-                "valid": False,
-                "error": str(e),
-                "warnings": []
-            }
+            result["error"] = f"Syntax error: {str(e)}"
+            logger.error("YARA compilation failed", error=str(e))
         except Exception as e:
-            return {
-                "valid": False,
-                "error": f"Unexpected error: {str(e)}",
-                "warnings": []
-            }
-
-    def validate_sigma(self, rule_text: str) -> Dict[str, Any]:
-        """Basic validation for Sigma rule YAML structure."""
-        import yaml
-        try:
-            parsed = yaml.safe_load(rule_text)
-            if not isinstance(parsed, dict):
-                return {"valid": False, "error": "Root element must be a dictionary"}
+            result["error"] = f"Validation error: {str(e)}"
+            logger.error("YARA validation failed", error=str(e))
             
-            required_fields = ["title", "logsource", "detection"]
-            missing = [f for f in required_fields if f not in parsed]
-            
-            if missing:
-                return {"valid": False, "error": f"Missing required fields: {', '.join(missing)}"}
-                
-            return {"valid": True, "error": None}
-            
-        except yaml.YAMLError as e:
-            return {
-                "valid": False,
-                "error": f"YAML syntax error: {str(e)}"
-            }
-
-rule_validator = RuleValidator()
+        return result

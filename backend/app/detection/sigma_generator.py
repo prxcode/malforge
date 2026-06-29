@@ -1,42 +1,80 @@
-from typing import Dict, Any
+# MAP — Sigma Generator
+# Programmatically generates Sigma rules based on extracted IOCs and behaviors.
+
+import datetime
+from typing import Dict, List, Any
+
 
 class SigmaGenerator:
-    def __init__(self):
-        pass
+    """Generates Sigma rules from analysis artifacts."""
 
-    def generate_from_analysis(self, sample_id: str, strings_data: Dict[str, Any]) -> str:
-        """Programmatically generate a basic Sigma rule based on artifacts."""
+    def generate(self, sample_hash: str, iocs: List[Dict[str, Any]]) -> str:
+        """Generate a basic Sigma rule based on file paths and registry keys."""
         
-        title = f"Auto Generated Sigma Rule {sample_id[:8]}"
+        title = f"Suspicious Activity associated with {sample_hash[:8]}"
+        date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y/%m/%d")
         
-        yaml = [
+        # Filter IOCs
+        file_paths = [ioc["value"] for ioc in iocs if ioc["indicator_type"] == "file_path"]
+        reg_keys = [ioc["value"] for ioc in iocs if ioc["indicator_type"] == "registry_key"]
+        
+        # Build YAML structure manually to ensure proper Sigma formatting
+        yaml_lines = [
             f"title: {title}",
-            f"id: {sample_id}",
+            f"id: {self._generate_uuid(sample_hash)}",
             "status: experimental",
-            "description: Auto-generated Sigma rule from static analysis strings",
-            "author: MAP Auto-Generator",
+            "description: Auto-generated Sigma rule from MAP platform.",
+            f"author: MAP_Automated_Engine",
+            f"date: {date}",
             "logsource:",
             "    category: process_creation",
             "    product: windows",
-            "detection:",
-            "    selection:"
+            "detection:"
         ]
         
-        has_artifacts = False
+        has_selection = False
         
-        # Add IPs if found
-        if "ips" in strings_data and strings_data["ips"]:
-            yaml.append("        DestinationIp:")
-            for ip in strings_data["ips"][:5]:
-                yaml.append(f"            - '{ip}'")
-            has_artifacts = True
+        if file_paths:
+            has_selection = True
+            yaml_lines.append("    selection_files:")
+            yaml_lines.append("        Image|endswith:")
+            for path in file_paths[:5]: # Take top 5 to avoid massive rules
+                # extract just the filename part for matching if possible
+                filename = path.split('\\')[-1]
+                if filename:
+                    yaml_lines.append(f"            - '\\{filename}'")
+                
+        if reg_keys:
+            has_selection = True
+            yaml_lines.append("    selection_registry:")
+            yaml_lines.append("        TargetObject|contains:")
+            for key in reg_keys[:5]:
+                yaml_lines.append(f"            - '{key}'")
+                
+        if not has_selection:
+            # Fallback dummy rule if no useful IOCs found
+            yaml_lines.append("    selection:")
+            yaml_lines.append(f"        Hashes|contains: 'SHA256={sample_hash}'")
+            yaml_lines.append("    condition: selection")
+        else:
+            condition = " or ".join([k.replace("selection_", "") for k in yaml_lines if "selection_" in k])
+            condition = " or ".join([line.strip().replace(":", "") for line in yaml_lines if line.strip().startswith("selection")])
+            # Simpler condition builder
+            selections = []
+            if file_paths: selections.append("selection_files")
+            if reg_keys: selections.append("selection_registry")
             
-        if not has_artifacts:
-            # Add a generic condition if nothing specific is found
-            yaml.append("        CommandLine|contains: 'suspicious_command'")
+            yaml_lines.append(f"    condition: {' or '.join(selections)}")
             
-        yaml.append("    condition: selection")
+        yaml_lines.extend([
+            "falsepositives:",
+            "    - Unknown",
+            "level: medium"
+        ])
         
-        return "\n".join(yaml)
+        return "\n".join(yaml_lines)
 
-sigma_generator = SigmaGenerator()
+    def _generate_uuid(self, hash_str: str) -> str:
+        """Generate a stable pseudo-UUID based on the hash."""
+        import uuid
+        return str(uuid.uuid5(uuid.NAMESPACE_DNS, f"map.local.{hash_str}"))

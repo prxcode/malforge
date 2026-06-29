@@ -1,45 +1,60 @@
-import uuid
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+# MAP — IOC Router
+# FastAPI endpoints for IOC management.
 
-from app.core.dependencies import get_db
+from typing import Optional
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.dependencies import get_authenticated_user, get_db
+from app.ioc.models import IndicatorType
 from app.ioc.schemas import IOCListResponse
-from app.ioc.models import IOCEntry
 from app.ioc.service import ioc_service
 
-router = APIRouter(prefix="/ioc", tags=["IOCs"])
+router = APIRouter(prefix="/ioc", tags=["Indicators of Compromise"])
 
-@router.post("/{sample_id}", status_code=status.HTTP_201_CREATED)
-async def generate_iocs(
-    sample_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db)
-):
-    """Manually extract IOCs for a sample from its analysis results."""
-    iocs = await ioc_service.extract_and_store_iocs(str(sample_id), db)
-    return {"message": f"Extracted {len(iocs)} IOCs", "count": len(iocs)}
 
-@router.get("/{sample_id}", response_model=IOCListResponse)
+@router.get("/sample/{sample_id}", response_model=IOCListResponse)
 async def get_sample_iocs(
-    sample_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db)
+    sample_id: UUID,
+    page: int = Query(1, ge=1),
+    size: int = Query(100, ge=1, le=1000),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_authenticated_user),
 ):
-    """Get all IOCs extracted from a specific sample."""
-    from sqlalchemy import func
-    
-    # Count total
-    total_result = await db.execute(
-        select(func.count(IOCEntry.id)).where(IOCEntry.sample_id == sample_id)
+    """Get all IOCs extracted for a specific sample."""
+    skip = (page - 1) * size
+    items, total = await ioc_service.list_iocs_for_sample(
+        db, sample_id, skip=skip, limit=size
     )
-    total = total_result.scalar_one()
     
-    # Get items
-    result = await db.execute(
-        select(IOCEntry).where(IOCEntry.sample_id == sample_id)
+    return IOCListResponse(
+        items=items,
+        total=total,
+        page=page,
+        size=size,
     )
-    items = result.scalars().all()
+
+
+@router.get("/search", response_model=IOCListResponse)
+async def search_iocs(
+    indicator_type: Optional[IndicatorType] = None,
+    q: Optional[str] = Query(None, min_length=3),
+    page: int = Query(1, ge=1),
+    size: int = Query(50, ge=1, le=200),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_authenticated_user),
+):
+    """Search the global IOC database."""
+    skip = (page - 1) * size
+    items, total = await ioc_service.search_iocs(
+        db, indicator_type=indicator_type, query_str=q, skip=skip, limit=size
+    )
     
-    return {
-        "items": items,
-        "total": total
-    }
+    return IOCListResponse(
+        items=items,
+        total=total,
+        page=page,
+        size=size,
+    )

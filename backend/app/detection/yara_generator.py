@@ -1,59 +1,84 @@
-from typing import Dict, Any, List
+# MAP — YARA Generator
+# Programmatically generates YARA rules based on sample metadata and analysis.
+
+import datetime
+from typing import Dict, List, Any
+
 
 class YaraGenerator:
-    def __init__(self):
-        pass
+    """Generates YARA rules from analysis artifacts."""
 
-    def generate_from_analysis(self, sample_id: str, pe_data: Dict[str, Any], strings_data: Dict[str, Any]) -> str:
-        """Programmatically generate a YARA rule based on static analysis artifacts."""
+    def generate(self, sample_hash: str, analysis_data: Dict[str, Any]) -> str:
+        """Generate a complete YARA rule."""
+        rule_name = f"MAP_Generated_{sample_hash[:8]}"
         
-        rule_name = f"Auto_Generated_Rule_{sample_id.replace('-', '_')}"
+        # Metadata
+        meta = self._generate_meta(sample_hash)
         
-        # Build metadata
-        meta = [
-            f'        author = "MAP Auto-Generator"',
-            f'        description = "Auto-generated rule for sample {sample_id}"',
-            f'        date = "{self._current_date()}"'
+        # Strings
+        strings_list, conditions = self._generate_strings_and_conditions(analysis_data)
+        
+        # Format the rule
+        rule_lines = [
+            f"rule {rule_name} {{",
+            "    meta:"
         ]
         
-        # Build strings
-        strings_section = []
-        condition_section = ["        all of them"]
-        
-        count = 0
-        if "urls" in strings_data:
-            for url in strings_data["urls"][:3]:  # Top 3 URLs
-                strings_section.append(f'        $s{count} = "{self._escape_yara(url)}" ascii wide')
-                count += 1
-                
-        if "registry" in strings_data:
-            for reg in strings_data["registry"][:3]:  # Top 3 registry keys
-                strings_section.append(f'        $s{count} = "{self._escape_yara(reg)}" ascii wide')
-                count += 1
-                
-        # If no strings found, add a dummy to make valid YARA
-        if not strings_section:
-            strings_section.append('        $dummy = "DUMMY_STRING" ascii')
-            condition_section = ["        $dummy"]
+        for k, v in meta.items():
+            rule_lines.append(f"        {k} = \"{v}\"")
             
-        rule = (
-            f"rule {rule_name} {{\n"
-            f"    meta:\n"
-            f"{chr(10).join(meta)}\n"
-            f"    strings:\n"
-            f"{chr(10).join(strings_section)}\n"
-            f"    condition:\n"
-            f"{chr(10).join(condition_section)}\n"
-            f"}}"
-        )
-        return rule
+        if strings_list:
+            rule_lines.append("")
+            rule_lines.append("    strings:")
+            for s in strings_list:
+                rule_lines.append(f"        {s}")
+                
+        rule_lines.append("")
+        rule_lines.append("    condition:")
         
-    def _current_date(self) -> str:
-        from datetime import datetime
-        return datetime.now().strftime("%Y-%m-%d")
+        for i, c in enumerate(conditions):
+            if i == 0:
+                rule_lines.append(f"        {c}")
+            else:
+                rule_lines.append(f"        and {c}")
+                
+        rule_lines.append("}")
         
-    def _escape_yara(self, value: str) -> str:
-        # Basic escaping for YARA string definition
-        return value.replace('"', '\\"').replace('\\', '\\\\')
+        return "\n".join(rule_lines)
 
-yara_generator = YaraGenerator()
+    def _generate_meta(self, sample_hash: str) -> Dict[str, str]:
+        """Generate standard YARA metadata."""
+        return {
+            "author": "MAP_Automated_Engine",
+            "description": "Auto-generated rule based on static analysis.",
+            "date": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d"),
+            "hash": sample_hash,
+            "tlp": "WHITE",
+            "version": "1.0"
+        }
+
+    def _generate_strings_and_conditions(self, analysis_data: Dict[str, Any]) -> tuple[List[str], List[str]]:
+        """Generate YARA strings and corresponding conditions."""
+        strings = []
+        conditions = []
+        
+        # Basic PE condition
+        conditions.append("uint16(0) == 0x5a4d") # MZ signature
+        
+        # Use suspicious strings
+        suspicious = analysis_data.get("suspicious_apis", [])
+        
+        str_count = 0
+        for s in suspicious:
+            # We add simple text strings, properly escaped
+            s_escaped = s.replace('"', '\\"')
+            strings.append(f"$s{str_count} = \"{s_escaped}\" ascii wide nocase")
+            str_count += 1
+            
+        if str_count > 0:
+            if str_count > 3:
+                conditions.append(f"3 of ($s*)")
+            else:
+                conditions.append(f"all of ($s*)")
+                
+        return strings, conditions

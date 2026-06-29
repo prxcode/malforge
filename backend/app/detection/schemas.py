@@ -1,26 +1,53 @@
-import uuid
+# MAP — Detection Schemas
+# Pydantic models for detection rule requests and responses.
+
 from datetime import datetime
-from typing import Optional
+from typing import Any, Dict, List, Optional
+from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
-class DetectionRuleBase(BaseModel):
-    rule_type: str
+from app.detection.models import RuleType
+
+
+class ValidationResultResponse(BaseModel):
+    """Validation metrics for a rule."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    rule_id: UUID
+    true_positive_rate: Optional[float] = None
+    false_positive_rate: Optional[float] = None
+    coverage: Optional[float] = None
+    precision: Optional[float] = None
+    recall: Optional[float] = None
+    score: Optional[float] = None
+    test_samples_count: int
+    matches_count: int
+    details: Dict[str, Any]
+    created_at: datetime
+
+
+class DetectionRuleResponse(BaseModel):
+    """Full detection rule response."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    sample_id: UUID
+    rule_type: RuleType
     rule_name: str
     version: int
     rule_text: str
-
-class DetectionRuleCreate(DetectionRuleBase):
-    sample_id: uuid.UUID
-
-class DetectionRuleResponse(DetectionRuleBase):
-    id: uuid.UUID
-    sample_id: uuid.UUID
+    metadata: Dict[str, Any]
+    
+    validation_results: List[ValidationResultResponse] = []
+    
     created_at: datetime
+    updated_at: datetime
 
-    class Config:
-        from_attributes = True
 
 class DetectionRuleListResponse(BaseModel):
-    items: list[DetectionRuleResponse]
+    """List of detection rules."""
+
+    items: List[DetectionRuleResponse]
     total: int

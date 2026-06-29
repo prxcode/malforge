@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Cpu, Search } from 'lucide-react';
 
 export function MemoryAnalysis() {
@@ -32,7 +32,7 @@ export function MemoryAnalysis() {
             <Cpu className="text-foreground" />
             Memory Forensics
           </h2>
-          <p className="text-muted mt-1 text-sm">Analyze Volatility 3 outputs for process injection and rootkits.</p>
+          <p className="text-muted-foreground mt-1 text-sm">Analyze Volatility 3 outputs for process injection and rootkits.</p>
         </div>
       </header>
 
@@ -47,10 +47,10 @@ export function MemoryAnalysis() {
         <button 
           onClick={fetchAnalysis}
           disabled={!sampleId || isLoading}
-          className="bg-white hover:bg-neutral-200 text-black px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
         >
-          <Search size={16} className="text-black" />
-          <span className="text-black">{isLoading ? 'Fetching...' : 'Analyze'}</span>
+          <Search size={16} />
+          <span>{isLoading ? 'Fetching...' : 'Analyze'}</span>
         </button>
       </div>
 
@@ -60,9 +60,9 @@ export function MemoryAnalysis() {
             <h3 className="font-semibold text-lg">Process Tree</h3>
           </div>
 
-          <div className="font-mono text-sm space-y-2 text-muted bg-background p-4 rounded border border-secondary overflow-x-auto">
+          <div className="font-mono text-sm space-y-2 text-muted-foreground bg-background p-4 rounded border border-secondary overflow-x-auto">
             {result.processes && result.processes.length > 0 ? result.processes.map((p: any, idx: number) => (
-              <div key={idx} className="flex items-center gap-4 hover:bg-white/5 px-2 py-1 rounded">
+              <div key={idx} className="flex items-center gap-4 hover:bg-secondary/50 px-2 py-1 rounded">
                 <span className="w-16">{p.pid}</span>
                 <span className="text-foreground">{p.name}</span>
               </div>

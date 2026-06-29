@@ -1,27 +1,39 @@
-import uuid
+# MAP — IOC Schemas
+# Pydantic models for IOC requests and responses.
+
 from datetime import datetime
 from typing import Optional
+from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+
+from app.ioc.models import IndicatorType
+
 
 class IOCBase(BaseModel):
-    indicator_type: str
+    """Base IOC schema."""
+
+    indicator_type: IndicatorType
     value: str
-    confidence: str
-    source: str
+    confidence: float
+    source: Optional[str] = None
     context: Optional[str] = None
 
-class IOCCreate(IOCBase):
-    sample_id: uuid.UUID
 
 class IOCResponse(IOCBase):
-    id: uuid.UUID
-    sample_id: uuid.UUID
-    first_seen: datetime
+    """Full IOC response schema."""
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
+    id: UUID
+    sample_id: UUID
+    created_at: datetime
+    updated_at: datetime
+
 
 class IOCListResponse(BaseModel):
+    """Paginated list of IOCs."""
+
     items: list[IOCResponse]
     total: int
+    page: int
+    size: int

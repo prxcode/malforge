@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { FileCode, Shield, Terminal, Search } from 'lucide-react';
 
 export function StaticAnalysis() {
@@ -32,7 +32,7 @@ export function StaticAnalysis() {
             <FileCode className="text-foreground" />
             Static Analysis
           </h2>
-          <p className="text-muted mt-1 text-sm">Reverse engineer binary structures and extract indicators.</p>
+          <p className="text-muted-foreground mt-1 text-sm">Reverse engineer binary structures and extract indicators.</p>
         </div>
       </header>
 
@@ -47,10 +47,10 @@ export function StaticAnalysis() {
         <button 
           onClick={fetchAnalysis}
           disabled={!sampleId || isLoading}
-          className="bg-white hover:bg-neutral-200 text-black px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
         >
-          <Search size={16} className="text-black" />
-          <span className="text-black">{isLoading ? 'Fetching...' : 'Analyze'}</span>
+          <Search size={16} />
+          <span>{isLoading ? 'Fetching...' : 'Analyze'}</span>
         </button>
       </div>
 
@@ -61,7 +61,7 @@ export function StaticAnalysis() {
               <h3 className="font-semibold text-lg border-b border-secondary pb-3 mb-4">PE Headers</h3>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 {Object.entries(result.headers || {}).map(([key, value]) => (
-                  <div key={key}><span className="text-muted">{key}:</span> <span className="font-mono text-foreground ml-2">{String(value)}</span></div>
+                  <div key={key}><span className="text-muted-foreground">{key}:</span> <span className="font-mono text-foreground ml-2">{String(value)}</span></div>
                 ))}
               </div>
             </div>
@@ -69,7 +69,7 @@ export function StaticAnalysis() {
             <div className="glass p-6 rounded-xl">
               <h3 className="font-semibold text-lg border-b border-secondary pb-3 mb-4">Sections</h3>
               <table className="w-full text-left text-sm">
-                <thead className="text-muted border-b border-secondary">
+                <thead className="text-muted-foreground border-b border-secondary">
                   <tr>
                     <th className="pb-2">Name</th>
                     <th className="pb-2">Virtual Size</th>
@@ -95,7 +95,7 @@ export function StaticAnalysis() {
                 <Shield size={18} />
                 Heuristics
               </h3>
-              <ul className="space-y-3 text-sm text-muted">
+              <ul className="space-y-3 text-sm text-muted-foreground">
                 {(result.heuristics || []).map((h: any, idx: number) => (
                   <li key={idx} className="flex items-start gap-2">
                     <span className="text-destructive mt-0.5">•</span>
@@ -113,7 +113,7 @@ export function StaticAnalysis() {
                 <Terminal size={18} />
                 Extracted Strings
               </h3>
-              <div className="bg-background border border-secondary p-3 rounded font-mono text-xs text-muted h-64 overflow-y-auto">
+              <div className="bg-background border border-secondary p-3 rounded font-mono text-xs text-muted-foreground h-64 overflow-y-auto">
                 {(result.strings || []).map((s: string, idx: number) => (
                   <div key={idx} className="truncate">{s}</div>
                 ))}
