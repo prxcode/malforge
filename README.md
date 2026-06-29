@@ -230,6 +230,16 @@ cd frontend
 npm run build
 ```
 
+### Generating Test Samples
+
+You can generate safe, synthetic PE files that will trigger the heuristic rules without needing real malware:
+
+```bash
+cd backend
+python ../scripts/generate_test_samples.py
+```
+This will create a `test_samples/` directory with `.exe` files you can safely upload via the UI.
+
 For a complete manual testing walkthrough with screenshots, see [docs/testing.md](docs/testing.md).
 
 ## Architecture
