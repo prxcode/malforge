@@ -29,10 +29,7 @@ async def scan_file(file: UploadFile = File(...), db: AsyncSession = Depends(get
     # 1. Upload & Store
     file_data = await file.read()
     sample, _ = await sample_service.process_upload(
-        db=db,
-        file_data=file_data,
-        filename=file.filename or "unknown",
-        uploaded_by="system"
+        db=db, file_data=file_data, filename=file.filename or "unknown", uploaded_by="system"
     )
 
     # 2. Static Analysis
@@ -78,10 +75,7 @@ async def scan_memory(file: UploadFile = File(...), db: AsyncSession = Depends(g
     # Upload first
     file_data = await file.read()
     sample, _ = await sample_service.process_upload(
-        db=db,
-        file_data=file_data,
-        filename=file.filename or "unknown",
-        uploaded_by="system"
+        db=db, file_data=file_data, filename=file.filename or "unknown", uploaded_by="system"
     )
     # Analyze memory
     mem_res = await memory_service.run_memory_analysis(str(sample.id), db)
