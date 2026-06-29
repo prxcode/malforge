@@ -5,12 +5,11 @@ Abstraction layer for file storage using MinIO S3-compatible storage.
 Falls back to local filesystem if MinIO is unavailable.
 """
 
+import hashlib
 import io
 import os
-import hashlib
-import structlog
-from typing import Optional
 
+import structlog
 from minio import Minio
 from minio.error import S3Error
 
@@ -24,7 +23,7 @@ class StorageService:
     """MinIO-backed object storage with local filesystem fallback."""
 
     def __init__(self):
-        self._client: Optional[Minio] = None
+        self._client: Minio | None = None
         self._bucket = settings.minio_bucket_samples
         self._local_path = settings.storage_path
         self._initialized = False
@@ -108,7 +107,7 @@ class StorageService:
         logger.info("File saved to local storage", path=local_file, size=len(file_data))
         return object_path
 
-    async def get_file(self, sha256: str, filename: str) -> Optional[bytes]:
+    async def get_file(self, sha256: str, filename: str) -> bytes | None:
         """Retrieve file from storage."""
         object_path = self._get_object_path(sha256, filename)
 

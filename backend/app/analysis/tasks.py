@@ -23,13 +23,13 @@ async def _run_analysis_async(sample_id_str: str) -> None:
             from sqlalchemy import select
             result = await db.execute(select(Sample).where(Sample.id == sample_id))
             sample = result.scalar_one_or_none()
-            
+
             if not sample:
                 logger.error("Sample not found for analysis", sample_id=str(sample_id))
                 return
-                
+
             logger.info("Starting static analysis", sample_id=str(sample_id))
-            
+
             try:
                 await analysis_service.run_analysis(db, sample)
                 logger.info("Completed static analysis", sample_id=str(sample_id))
@@ -37,7 +37,7 @@ async def _run_analysis_async(sample_id_str: str) -> None:
                 logger.exception("Analysis failed", sample_id=str(sample_id), error=str(e))
                 sample.status = SampleStatus.FAILED
                 await db.commit()
-                
+
     except Exception as e:
         logger.exception("Failed in async analysis wrapper", error=str(e))
 

@@ -20,16 +20,16 @@ async def _generate_rules_async(sample_id_str: str) -> None:
             from sqlalchemy import select
             result = await db.execute(select(Sample).where(Sample.id == sample_id))
             sample = result.scalar_one_or_none()
-            
+
             if sample:
                 logger.info("Generating rules asynchronously", sample_id=sample_id_str)
                 rules = await detection_service.generate_rules(db, sample)
-                
+
                 # Auto-validate YARA rules
                 for rule in rules:
                     if rule.rule_type == "yara":
                         await detection_service.validate_rule(db, rule)
-                        
+
     except Exception as e:
         logger.exception("Failed background rule generation", error=str(e))
 

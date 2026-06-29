@@ -1,10 +1,19 @@
 # MAP — Sample Router
 # FastAPI endpoints for sample management.
 
-from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -24,8 +33,8 @@ settings = get_settings()
 async def upload_sample(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    tags: Optional[str] = Form(None),
-    notes: Optional[str] = Form(None),
+    tags: str | None = Form(None),
+    notes: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_authenticated_user),
 ):
@@ -40,7 +49,7 @@ async def upload_sample(
         )
 
     file_data = await file.read()
-    
+
     sample, created = await sample_service.process_upload(
         db=db,
         file_data=file_data,
@@ -56,11 +65,11 @@ async def upload_sample(
     # Trigger analysis task asynchronously if it's a PE file
     if sample.file_type in ["pe_exe", "pe_dll"]:
         from app.analysis.tasks import run_static_analysis
-        
+
         # Mark as analyzing
         sample.status = SampleStatus.ANALYZING
         await db.commit()
-        
+
         # Trigger celery task
         run_static_analysis.delay(str(sample.id))
 
@@ -71,14 +80,14 @@ async def upload_sample(
 async def list_samples(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
-    status: Optional[SampleStatus] = None,
+    status: SampleStatus | None = None,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_authenticated_user),
 ):
     """List uploaded samples with pagination."""
     skip = (page - 1) * size
     items, total = await sample_service.list_samples(db, skip=skip, limit=size, status=status)
-    
+
     return SampleListResponse(
         items=items,
         total=total,
@@ -111,7 +120,7 @@ async def update_sample(
     sample = await sample_service.get_sample_by_id(db, sample_id)
     if not sample:
         raise HTTPException(status_code=404, detail="Sample not found")
-        
+
     return await sample_service.update_sample(db, sample, update_data)
 
 
@@ -125,12 +134,12 @@ async def delete_sample(
     # Ensure role is high enough
     if current_user["role"] not in ["admin", "engineer"]:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="Insufficient permissions to delete samples"
         )
-        
+
     sample = await sample_service.get_sample_by_id(db, sample_id)
     if not sample:
         raise HTTPException(status_code=404, detail="Sample not found")
-        
+
     await sample_service.delete_sample(db, sample)

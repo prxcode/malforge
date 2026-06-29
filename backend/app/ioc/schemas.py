@@ -2,7 +2,6 @@
 # Pydantic models for IOC requests and responses.
 
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -16,8 +15,8 @@ class IOCBase(BaseModel):
     indicator_type: IndicatorType
     value: str
     confidence: float
-    source: Optional[str] = None
-    context: Optional[str] = None
+    source: str | None = None
+    context: str | None = None
 
 
 class IOCResponse(IOCBase):

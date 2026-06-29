@@ -2,7 +2,6 @@
 # Advanced regular expressions and logic to extract high-fidelity IOCs.
 
 import re
-from typing import Dict, List, Set, Tuple
 
 from app.ioc.models import IndicatorType
 
@@ -40,7 +39,7 @@ class IOCExtractor:
         self.ignore_ips = {"127.0.0.1", "0.0.0.0", "255.255.255.255"}
         self.ignore_domains = {"microsoft.com", "windows.com", "schema.org", "w3.org"}
 
-    def extract_from_strings(self, strings: List[str]) -> List[Dict]:
+    def extract_from_strings(self, strings: list[str]) -> list[dict]:
         """Extract IOCs from a list of raw strings."""
         extracted = []
         seen = set()
@@ -53,16 +52,16 @@ class IOCExtractor:
                         continue
                     if ind_type == IndicatorType.DOMAIN and self._is_benign_domain(match):
                         continue
-                        
+
                     # Deduplicate
                     unique_key = f"{ind_type.value}:{match}"
                     if unique_key in seen:
                         continue
                     seen.add(unique_key)
-                    
+
                     # Compute confidence
                     confidence = self._compute_confidence(ind_type, match)
-                    
+
                     extracted.append({
                         "indicator_type": ind_type,
                         "value": match,
@@ -70,7 +69,7 @@ class IOCExtractor:
                         "source": "static_strings",
                         "context": s[:100] # store partial context
                     })
-                    
+
         return extracted
 
     def _is_internal_ip(self, ip: str) -> bool:

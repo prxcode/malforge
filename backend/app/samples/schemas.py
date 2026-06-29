@@ -2,7 +2,6 @@
 # Pydantic models for sample requests and responses.
 
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -14,8 +13,8 @@ class SampleBase(BaseModel):
     """Base sample schema."""
 
     filename: str = Field(..., description="Original filename")
-    tags: Optional[str] = Field(None, description="JSON array of tags as string")
-    notes: Optional[str] = Field(None, description="Analyst notes")
+    tags: str | None = Field(None, description="JSON array of tags as string")
+    notes: str | None = Field(None, description="Analyst notes")
 
 
 class SampleCreate(SampleBase):
@@ -26,8 +25,8 @@ class SampleCreate(SampleBase):
 class SampleUpdate(BaseModel):
     """Schema for updating a sample."""
 
-    tags: Optional[str] = None
-    notes: Optional[str] = None
+    tags: str | None = None
+    notes: str | None = None
 
 
 class SampleResponse(SampleBase):
@@ -39,13 +38,13 @@ class SampleResponse(SampleBase):
     sha1: str
     md5: str
     file_size: int
-    entropy: Optional[float] = None
+    entropy: float | None = None
     file_type: FileType
-    mime_type: Optional[str] = None
-    compiler_info: Optional[str] = None
-    signature_status: Optional[str] = None
+    mime_type: str | None = None
+    compiler_info: str | None = None
+    signature_status: str | None = None
     status: SampleStatus
-    uploaded_by: Optional[str] = None
+    uploaded_by: str | None = None
     created_at: datetime
     updated_at: datetime
 

@@ -6,7 +6,7 @@ Database model for static analysis results.
 
 import uuid
 
-from sqlalchemy import DateTime, Float, ForeignKey, Text
+from sqlalchemy import Float, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

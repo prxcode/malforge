@@ -25,13 +25,13 @@ async def trigger_memory_analysis(
     sample = await sample_service.get_sample_by_id(db, sample_id)
     if not sample:
         raise HTTPException(status_code=404, detail="Sample not found")
-        
+
     if sample.file_type != "memory_dump":
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Sample is not a memory dump"
         )
-        
+
     run_memory_analysis.delay(str(sample.id))
     return {"message": "Memory analysis task queued", "sample_id": sample_id}
 
@@ -46,7 +46,7 @@ async def get_memory_analysis(
     result = await memory_service.get_analysis_by_sample_id(db, sample_id)
     if not result:
         raise HTTPException(
-            status_code=404, 
+            status_code=404,
             detail="Memory analysis results not found. Analysis may still be pending."
         )
     return result

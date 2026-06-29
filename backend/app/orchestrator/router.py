@@ -1,19 +1,25 @@
 import uuid
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Dict, Any
 
-from app.core.database import get_async_session
-from app.samples.service import sample_service
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.analysis.service import analysis_service
-from app.ioc.service import ioc_service
+from app.core.database import get_async_session
 from app.detection.service import detection_service
+from app.ioc.service import ioc_service
 from app.memory.service import memory_service
-from app.reports.service import report_service
 from app.orchestrator.schemas import (
-    ScanResponse, MemoryScanResponse, IocExtractRequest, IocExtractResponse,
-    DetectionMatchRequest, DetectionMatchResponse, GenerateRuleRequest, GenerateRuleResponse
+    DetectionMatchRequest,
+    DetectionMatchResponse,
+    GenerateRuleRequest,
+    GenerateRuleResponse,
+    IocExtractRequest,
+    IocExtractResponse,
+    MemoryScanResponse,
+    ScanResponse,
 )
+from app.reports.service import report_service
+from app.samples.service import sample_service
 
 router = APIRouter(tags=["Orchestration"])
 
@@ -21,26 +27,26 @@ router = APIRouter(tags=["Orchestration"])
 async def scan_file(file: UploadFile = File(...), db: AsyncSession = Depends(get_async_session)):
     # 1. Upload & Store
     sample = await sample_service.process_upload(file, db)
-    
+
     # 2. Static Analysis
     analysis_res = await analysis_service.run_static_analysis(str(sample.id), db)
-    
+
     # 3. Extract IOCs
     iocs = await ioc_service.extract_and_store_iocs(str(sample.id), db)
-    
+
     # 4. YARA Matches (Mocked via analysis heuristics for now as an example)
     yara_matches = ["Suspicious_Packer", "Suspicious_Imports"] if analysis_res.heuristic_flags else []
-    
+
     # Calculate simple risk score
     risk_score = 0.0
     if analysis_res.heuristic_flags:
         risk_score += len(analysis_res.heuristic_flags) * 15.0
     if iocs:
         risk_score += len(iocs) * 5.0
-    
+
     risk_score = min(100.0, risk_score)
     classification = "MALICIOUS" if risk_score > 60 else "SUSPICIOUS" if risk_score > 30 else "BENIGN"
-    
+
     return ScanResponse(
         sample_id=str(sample.id),
         sha256=sample.sha256,
@@ -61,7 +67,7 @@ async def scan_memory(file: UploadFile = File(...), db: AsyncSession = Depends(g
     sample = await sample_service.process_upload(file, db)
     # Analyze memory
     mem_res = await memory_service.run_memory_analysis(str(sample.id), db)
-    
+
     return MemoryScanResponse(
         sample_id=str(sample.id),
         status="completed",
@@ -87,7 +93,7 @@ async def detection_match(req: DetectionMatchRequest):
 async def generate_rule(req: GenerateRuleRequest, db: AsyncSession = Depends(get_async_session)):
     sample_uuid = uuid.UUID(req.sample_id)
     rules = await detection_service.generate_rules(db, sample_uuid)
-    
+
     yara_rule = ""
     sigma_rule = ""
     for r in rules:
@@ -95,7 +101,7 @@ async def generate_rule(req: GenerateRuleRequest, db: AsyncSession = Depends(get
             yara_rule = r.rule_text
         elif r.rule_type.value == "sigma":
             sigma_rule = r.rule_text
-            
+
     return GenerateRuleResponse(yara_rule=yara_rule, sigma_rule=sigma_rule)
 
 @router.get("/report/{file_hash}")
@@ -103,6 +109,6 @@ async def get_report(file_hash: str, db: AsyncSession = Depends(get_async_sessio
     sample = await sample_service.get_by_hash(db, file_hash)
     if not sample:
         raise HTTPException(status_code=404, detail="Sample not found")
-        
+
     report = await report_service.generate_report(str(sample.id), db)
     return report

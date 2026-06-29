@@ -1,8 +1,9 @@
-import pytest
 from contextlib import asynccontextmanager
+
 from fastapi.testclient import TestClient
 
 from app.main import app
+
 
 # Mock lifespan to prevent DB and MinIO connections during tests without a real backend
 @asynccontextmanager

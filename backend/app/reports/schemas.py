@@ -2,7 +2,7 @@
 # Pydantic models for threat intelligence reports.
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -14,19 +14,19 @@ class ThreatReportResponse(BaseModel):
 
     id: UUID
     sample_id: UUID
-    
-    executive_summary: Optional[str] = None
-    file_metadata: Dict[str, Any]
-    malware_characteristics: Dict[str, Any]
-    attack_mapping: List[Dict[str, Any]]
-    observed_indicators: List[Dict[str, Any]]
-    detection_opportunities: List[Dict[str, Any]]
-    recommendations: List[Dict[str, Any]]
-    rule_references: List[Dict[str, Any]]
-    ioc_summary: Dict[str, Any]
-    
+
+    executive_summary: str | None = None
+    file_metadata: dict[str, Any]
+    malware_characteristics: dict[str, Any]
+    attack_mapping: list[dict[str, Any]]
+    observed_indicators: list[dict[str, Any]]
+    detection_opportunities: list[dict[str, Any]]
+    recommendations: list[dict[str, Any]]
+    rule_references: list[dict[str, Any]]
+    ioc_summary: dict[str, Any]
+
     confidence_level: str
-    
+
     created_at: datetime
     updated_at: datetime
 
@@ -34,7 +34,7 @@ class ThreatReportResponse(BaseModel):
 class ThreatReportListResponse(BaseModel):
     """List of threat reports."""
 
-    items: List[ThreatReportResponse]
+    items: list[ThreatReportResponse]
     total: int
     page: int
     size: int

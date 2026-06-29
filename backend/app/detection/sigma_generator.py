@@ -2,38 +2,38 @@
 # Programmatically generates Sigma rules based on extracted IOCs and behaviors.
 
 import datetime
-from typing import Dict, List, Any
+from typing import Any
 
 
 class SigmaGenerator:
     """Generates Sigma rules from analysis artifacts."""
 
-    def generate(self, sample_hash: str, iocs: List[Dict[str, Any]]) -> str:
+    def generate(self, sample_hash: str, iocs: list[dict[str, Any]]) -> str:
         """Generate a basic Sigma rule based on file paths and registry keys."""
-        
+
         title = f"Suspicious Activity associated with {sample_hash[:8]}"
-        date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y/%m/%d")
-        
+        date = datetime.datetime.now(datetime.UTC).strftime("%Y/%m/%d")
+
         # Filter IOCs
         file_paths = [ioc["value"] for ioc in iocs if ioc["indicator_type"] == "file_path"]
         reg_keys = [ioc["value"] for ioc in iocs if ioc["indicator_type"] == "registry_key"]
-        
+
         # Build YAML structure manually to ensure proper Sigma formatting
         yaml_lines = [
             f"title: {title}",
             f"id: {self._generate_uuid(sample_hash)}",
             "status: experimental",
             "description: Auto-generated Sigma rule from MAP platform.",
-            f"author: MAP_Automated_Engine",
+            "author: MAP_Automated_Engine",
             f"date: {date}",
             "logsource:",
             "    category: process_creation",
             "    product: windows",
             "detection:"
         ]
-        
+
         has_selection = False
-        
+
         if file_paths:
             has_selection = True
             yaml_lines.append("    selection_files:")
@@ -43,35 +43,35 @@ class SigmaGenerator:
                 filename = path.split('\\')[-1]
                 if filename:
                     yaml_lines.append(f"            - '\\{filename}'")
-                
+
         if reg_keys:
             has_selection = True
             yaml_lines.append("    selection_registry:")
             yaml_lines.append("        TargetObject|contains:")
             for key in reg_keys[:5]:
                 yaml_lines.append(f"            - '{key}'")
-                
+
         if not has_selection:
             # Fallback dummy rule if no useful IOCs found
             yaml_lines.append("    selection:")
             yaml_lines.append(f"        Hashes|contains: 'SHA256={sample_hash}'")
             yaml_lines.append("    condition: selection")
         else:
-            condition = " or ".join([k.replace("selection_", "") for k in yaml_lines if "selection_" in k])
-            condition = " or ".join([line.strip().replace(":", "") for line in yaml_lines if line.strip().startswith("selection")])
             # Simpler condition builder
             selections = []
-            if file_paths: selections.append("selection_files")
-            if reg_keys: selections.append("selection_registry")
-            
+            if file_paths:
+                selections.append("selection_files")
+            if reg_keys:
+                selections.append("selection_registry")
+
             yaml_lines.append(f"    condition: {' or '.join(selections)}")
-            
+
         yaml_lines.extend([
             "falsepositives:",
             "    - Unknown",
             "level: medium"
         ])
-        
+
         return "\n".join(yaml_lines)
 
     def _generate_uuid(self, hash_str: str) -> str:

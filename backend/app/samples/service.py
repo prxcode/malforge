@@ -1,10 +1,9 @@
 # MAP — Sample Service
 # Business logic for processing malware samples.
 
-import magic
-from typing import Optional, Tuple
 from uuid import UUID
 
+import magic
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,19 +15,19 @@ from app.samples.schemas import SampleUpdate
 class SampleService:
     """Service for managing malware samples."""
 
-    async def get_sample_by_id(self, db: AsyncSession, sample_id: UUID) -> Optional[Sample]:
+    async def get_sample_by_id(self, db: AsyncSession, sample_id: UUID) -> Sample | None:
         """Retrieve a sample by its UUID."""
         result = await db.execute(select(Sample).where(Sample.id == sample_id))
         return result.scalar_one_or_none()
 
-    async def get_sample_by_hash(self, db: AsyncSession, sha256: str) -> Optional[Sample]:
+    async def get_sample_by_hash(self, db: AsyncSession, sha256: str) -> Sample | None:
         """Retrieve a sample by its SHA256 hash."""
         result = await db.execute(select(Sample).where(Sample.sha256 == sha256))
         return result.scalar_one_or_none()
 
     async def list_samples(
-        self, db: AsyncSession, skip: int = 0, limit: int = 20, status: Optional[SampleStatus] = None
-    ) -> Tuple[list[Sample], int]:
+        self, db: AsyncSession, skip: int = 0, limit: int = 20, status: SampleStatus | None = None
+    ) -> tuple[list[Sample], int]:
         """List samples with optional filtering."""
         query = select(Sample)
         if status:
@@ -51,10 +50,10 @@ class SampleService:
         db: AsyncSession,
         file_data: bytes,
         filename: str,
-        uploaded_by: Optional[str] = None,
-        tags: Optional[str] = None,
-        notes: Optional[str] = None,
-    ) -> Tuple[Sample, bool]:
+        uploaded_by: str | None = None,
+        tags: str | None = None,
+        notes: str | None = None,
+    ) -> tuple[Sample, bool]:
         """
         Process an uploaded file, compute hashes, save to storage, and create DB record.
         Returns the sample and a boolean indicating if it was newly created.
@@ -107,7 +106,7 @@ class SampleService:
     def _determine_file_type(self, data: bytes, mime_type: str, filename: str) -> FileType:
         """Determine the file type based on magic bytes and MIME type."""
         filename_lower = filename.lower()
-        
+
         if data.startswith(b"MZ"):
             if filename_lower.endswith(".dll"):
                 return FileType.PE_DLL
@@ -118,7 +117,7 @@ class SampleService:
             return FileType.ZIP_ARCHIVE
         elif "application/x-dmp" in mime_type or filename_lower.endswith((".dmp", ".vmem", ".raw")):
             return FileType.MEMORY_DUMP
-            
+
         return FileType.UNKNOWN
 
     async def update_sample(

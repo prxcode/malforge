@@ -27,25 +27,25 @@ class MemoryAnalysisService:
 
     async def run_analysis(self, db: AsyncSession, sample: Sample) -> MemoryAnalysisResult:
         """Run memory analysis on a memory dump file."""
-        
+
         if sample.file_type != "memory_dump":
             raise ValueError(f"Sample {sample.id} is not a memory dump.")
-            
+
         # Ensure we have the file available locally for Volatility
         # Volatility works best with actual filesystem paths
         file_path = storage_service._get_object_path(sample.sha256, sample.filename)
-        
+
         # NOTE: In a true MinIO-only environment, we would need to download the dump
         # to a temporary local file first. For this implementation, we assume local fallback works.
         # A robust solution downloads it if necessary.
-        
+
         # Run Volatility
         adapter = Volatility3Adapter(file_path)
         analysis_data = adapter.analyze()
-        
+
         status = analysis_data.get("status", "failed")
         error_msg = analysis_data.get("error")
-        
+
         result = MemoryAnalysisResult(
             sample_id=sample.id,
             analysis_status=status,
@@ -62,21 +62,21 @@ class MemoryAnalysisService:
             injected_memory=analysis_data.get("injected_memory", []),
             timeline=analysis_data.get("timeline", [])
         )
-            
+
         # Update existing or add new
         existing = await self.get_analysis_by_sample_id(db, sample.id)
         if existing:
             await db.delete(existing)
             await db.flush()
-            
+
         db.add(result)
-        
+
         # Update sample status
         sample.status = SampleStatus.COMPLETED if status == "completed" else SampleStatus.FAILED
-        
+
         await db.commit()
         await db.refresh(result)
-        
+
         return result
 
 

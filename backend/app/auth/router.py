@@ -5,9 +5,11 @@ Endpoints for user registration, login, and profile.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.models import User
 from app.core.database import get_async_session
 from app.core.security import (
     TokenResponse,
@@ -18,7 +20,6 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
-from app.auth.models import User
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -75,7 +76,6 @@ async def register(
     )
 
 
-from pydantic import BaseModel
 
 
 class LoginBody(BaseModel):

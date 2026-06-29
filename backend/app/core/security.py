@@ -4,8 +4,7 @@ MAP — JWT Authentication & Security
 Handles JWT token creation, validation, password hashing, and auth dependencies.
 """
 
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
@@ -52,7 +51,7 @@ class UserCreate(BaseModel):
     username: str
     email: str
     password: str
-    full_name: Optional[str] = None
+    full_name: str | None = None
     role: str = "analyst"
 
 
@@ -62,7 +61,7 @@ class UserResponse(BaseModel):
     id: UUID
     username: str
     email: str
-    full_name: Optional[str]
+    full_name: str | None
     role: str
     is_active: bool
 
@@ -82,10 +81,10 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def create_access_token(
     user_id: str,
     role: str = "analyst",
-    expires_delta: Optional[timedelta] = None,
+    expires_delta: timedelta | None = None,
 ) -> str:
     """Create a JWT access token."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     expire = now + (
         expires_delta
         or timedelta(minutes=settings.jwt_access_token_expire_minutes)
@@ -118,7 +117,7 @@ def decode_access_token(token: str) -> TokenPayload:
 
 # ---------- Auth Dependencies ----------
 async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """

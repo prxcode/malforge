@@ -2,13 +2,12 @@
 # Business logic for managing Indicators of Compromise.
 
 from uuid import UUID
-from typing import List, Tuple
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ioc.extractors import IOCExtractor
-from app.ioc.models import IOCEntry, IndicatorType
+from app.ioc.models import IndicatorType, IOCEntry
 
 
 class IOCService:
@@ -19,7 +18,7 @@ class IOCService:
 
     async def list_iocs_for_sample(
         self, db: AsyncSession, sample_id: UUID, skip: int = 0, limit: int = 100
-    ) -> Tuple[List[IOCEntry], int]:
+    ) -> tuple[list[IOCEntry], int]:
         """List all IOCs associated with a specific sample."""
         query = select(IOCEntry).where(IOCEntry.sample_id == sample_id)
 
@@ -34,19 +33,19 @@ class IOCService:
         return items, total
 
     async def search_iocs(
-        self, 
-        db: AsyncSession, 
+        self,
+        db: AsyncSession,
         indicator_type: IndicatorType | None = None,
         query_str: str | None = None,
-        skip: int = 0, 
+        skip: int = 0,
         limit: int = 50
-    ) -> Tuple[List[IOCEntry], int]:
+    ) -> tuple[list[IOCEntry], int]:
         """Search IOCs globally."""
         query = select(IOCEntry)
-        
+
         if indicator_type:
             query = query.where(IOCEntry.indicator_type == indicator_type)
-            
+
         if query_str:
             # Substring match
             query = query.where(IOCEntry.value.ilike(f"%{query_str}%"))
@@ -62,11 +61,11 @@ class IOCService:
         return items, total
 
     async def extract_and_store_from_strings(
-        self, db: AsyncSession, sample_id: UUID, strings: List[str]
-    ) -> List[IOCEntry]:
+        self, db: AsyncSession, sample_id: UUID, strings: list[str]
+    ) -> list[IOCEntry]:
         """Extract IOCs from strings and store them in the database."""
         extracted_data = self.extractor.extract_from_strings(strings)
-        
+
         # Remove old static_strings IOCs for this sample if re-running
         await db.execute(
             select(IOCEntry).where(
@@ -75,7 +74,7 @@ class IOCService:
             )
         )
         # TODO: Implement proper deletion of old entries if needed
-        
+
         entries = []
         for data in extracted_data:
             entry = IOCEntry(
@@ -88,7 +87,7 @@ class IOCService:
             )
             db.add(entry)
             entries.append(entry)
-            
+
         await db.commit()
         return entries
 

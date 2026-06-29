@@ -22,13 +22,13 @@ async def _run_memory_analysis_async(sample_id_str: str) -> None:
             from sqlalchemy import select
             result = await db.execute(select(Sample).where(Sample.id == sample_id))
             sample = result.scalar_one_or_none()
-            
+
             if not sample:
                 logger.error("Sample not found for memory analysis", sample_id=sample_id_str)
                 return
-                
+
             logger.info("Starting memory analysis", sample_id=sample_id_str)
-            
+
             try:
                 await memory_service.run_analysis(db, sample)
                 logger.info("Completed memory analysis", sample_id=sample_id_str)
@@ -36,7 +36,7 @@ async def _run_memory_analysis_async(sample_id_str: str) -> None:
                 logger.exception("Memory analysis failed", sample_id=sample_id_str, error=str(e))
                 sample.status = SampleStatus.FAILED
                 await db.commit()
-                
+
     except Exception as e:
         logger.exception("Failed in async memory analysis wrapper", error=str(e))
 

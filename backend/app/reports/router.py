@@ -4,8 +4,8 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_authenticated_user, get_db
 from app.reports.schemas import ThreatReportListResponse, ThreatReportResponse
@@ -25,7 +25,7 @@ async def get_report_for_sample(
     report = await report_service.get_report_by_sample_id(db, sample_id)
     if not report:
         raise HTTPException(
-            status_code=404, 
+            status_code=404,
             detail="Threat report not found. It may not have been generated yet."
         )
     return report
@@ -40,10 +40,10 @@ async def generate_report(
     """Manually trigger generation of a threat report for a sample."""
     result = await db.execute(select(Sample).where(Sample.id == sample_id))
     sample = result.scalar_one_or_none()
-    
+
     if not sample:
         raise HTTPException(status_code=404, detail="Sample not found")
-        
+
     report = await report_service.generate_report(db, sample)
     return report
 
@@ -58,7 +58,7 @@ async def list_reports(
     """List all threat reports."""
     skip = (page - 1) * size
     items, total = await report_service.list_reports(db, skip=skip, limit=size)
-    
+
     return ThreatReportListResponse(
         items=items,
         total=total,

@@ -26,20 +26,20 @@ class StaticAnalysisService:
 
     async def run_analysis(self, db: AsyncSession, sample: Sample) -> StaticAnalysisResult:
         """Run full static analysis on a sample."""
-        
+
         # 1. Retrieve file data
         file_data = await storage_service.get_file(sample.sha256, sample.filename)
         if not file_data:
             raise ValueError(f"File data not found for sample {sample.id}")
-            
+
         # 2. Extract Strings
         str_extractor = StringExtractor(file_data)
         strings_data = str_extractor.extract()
-        
+
         # 3. Analyze PE structure
         pe_analyzer = PEAnalyzer(file_data)
         pe_data = pe_analyzer.analyze()
-        
+
         if "error" in pe_data:
             # Not a valid PE file, store string extraction only
             result = StaticAnalysisResult(
@@ -51,24 +51,24 @@ class StaticAnalysisService:
             # 4. Run heuristics
             heuristics = HeuristicsEngine(pe_data, strings_data)
             flags, score = heuristics.analyze()
-            
+
             # Combine suspicious APIs from heuristics
             suspicious_apis = []
             imports = pe_data.get("imports", [])
             all_funcs = set()
             for imp in imports:
                 all_funcs.update([f.lower() for f in imp.get("functions", [])])
-                
+
             suspicious_keywords = [
-                "virtualalloc", "writeprocessmemory", "createremotethread", 
+                "virtualalloc", "writeprocessmemory", "createremotethread",
                 "setwindowshook", "isdebuggerpresent"
             ]
-            
+
             for func in all_funcs:
                 for keyword in suspicious_keywords:
                     if keyword in func:
                         suspicious_apis.append(func)
-            
+
             # 5. Create result record
             result = StaticAnalysisResult(
                 sample_id=sample.id,
@@ -86,20 +86,20 @@ class StaticAnalysisService:
                 image_base=pe_data.get("image_base"),
                 timestamp=pe_data.get("timestamp"),
             )
-            
+
         # Update existing or add new
         existing = await self.get_analysis_by_sample_id(db, sample.id)
         if existing:
             await db.delete(existing)
             await db.flush()
-            
+
         db.add(result)
-        
+
         # Update sample status
         sample.status = SampleStatus.COMPLETED
         await db.commit()
         await db.refresh(result)
-        
+
         return result
 
 

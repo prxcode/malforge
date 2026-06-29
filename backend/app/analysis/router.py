@@ -25,7 +25,7 @@ async def trigger_analysis(
     sample = await sample_service.get_sample_by_id(db, sample_id)
     if not sample:
         raise HTTPException(status_code=404, detail="Sample not found")
-        
+
     run_static_analysis.delay(str(sample.id))
     return {"message": "Static analysis task queued", "sample_id": sample_id}
 
@@ -40,7 +40,7 @@ async def get_analysis(
     result = await analysis_service.get_analysis_by_sample_id(db, sample_id)
     if not result:
         raise HTTPException(
-            status_code=404, 
+            status_code=404,
             detail="Analysis results not found. Analysis may still be pending."
         )
     return result

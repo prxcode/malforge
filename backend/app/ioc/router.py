@@ -1,10 +1,9 @@
 # MAP — IOC Router
 # FastAPI endpoints for IOC management.
 
-from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_authenticated_user, get_db
@@ -28,7 +27,7 @@ async def get_sample_iocs(
     items, total = await ioc_service.list_iocs_for_sample(
         db, sample_id, skip=skip, limit=size
     )
-    
+
     return IOCListResponse(
         items=items,
         total=total,
@@ -39,8 +38,8 @@ async def get_sample_iocs(
 
 @router.get("/search", response_model=IOCListResponse)
 async def search_iocs(
-    indicator_type: Optional[IndicatorType] = None,
-    q: Optional[str] = Query(None, min_length=3),
+    indicator_type: IndicatorType | None = None,
+    q: str | None = Query(None, min_length=3),
     page: int = Query(1, ge=1),
     size: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
@@ -51,7 +50,7 @@ async def search_iocs(
     items, total = await ioc_service.search_iocs(
         db, indicator_type=indicator_type, query_str=q, skip=skip, limit=size
     )
-    
+
     return IOCListResponse(
         items=items,
         total=total,

@@ -1,27 +1,27 @@
 # MAP — Heuristics Engine
 # Identifies suspicious traits in PE structure and strings.
 
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 
 class HeuristicsEngine:
     """Applies heuristic rules to PE and string analysis results."""
 
-    def __init__(self, pe_data: Dict[str, Any], strings_data: Dict[str, Any]):
+    def __init__(self, pe_data: dict[str, Any], strings_data: dict[str, Any]):
         self.pe_data = pe_data
         self.strings_data = strings_data
         self.flags = []
         self.score = 0.0
 
-    def analyze(self) -> Tuple[List[Dict[str, Any]], float]:
+    def analyze(self) -> tuple[list[dict[str, Any]], float]:
         """Run all heuristics and return flags and total score (0.0 to 10.0)."""
         self._check_entropy()
         self._check_section_names()
         self._check_suspicious_imports()
-        
+
         # Cap score at 10.0
         self.score = min(self.score, 10.0)
-        
+
         return self.flags, round(self.score, 1)
 
     def _add_flag(self, name: str, description: str, severity: str, weight: float):
@@ -60,11 +60,11 @@ class HeuristicsEngine:
     def _check_suspicious_imports(self):
         """Check for API combinations associated with malicious behavior."""
         imports = self.pe_data.get("imports", [])
-        
+
         all_funcs = set()
         for imp in imports:
             all_funcs.update([f.lower() for f in imp.get("functions", [])])
-            
+
         # Process Injection
         if "virtualallocex" in all_funcs and "writeprocessmemory" in all_funcs and "createremotethread" in all_funcs:
             self._add_flag(
@@ -73,16 +73,18 @@ class HeuristicsEngine:
                 "high",
                 4.0
             )
-            
+
         # Keylogging
-        if "setwindowshookex" in all_funcs or "setwindowshookexa" in all_funcs or "setwindowshookexw" in all_funcs:
-            if "getasynckeystate" in all_funcs or "getkeystate" in all_funcs:
-                self._add_flag("Keylogging APIs", "Contains window hook and keystate APIs.", "high", 3.5)
-                
+        hook_apis = {"setwindowshookex", "setwindowshookexa", "setwindowshookexw"}
+        key_apis = {"getasynckeystate", "getkeystate"}
+
+        if any(api in all_funcs for api in hook_apis) and any(api in all_funcs for api in key_apis):
+            self._add_flag("Keylogging APIs", "Contains window hook and keystate APIs.", "high", 3.5)
+
         # Cryptography / Ransomware
         if "cryptacquirecontexta" in all_funcs and "cryptencrypt" in all_funcs:
             self._add_flag("Cryptography APIs", "Contains crypto APIs often used in ransomware.", "medium", 2.0)
-            
+
         # Anti-Debugging
         if "isdebuggerpresent" in all_funcs or "checkremotedebuggerpresent" in all_funcs:
             self._add_flag("Anti-Debugging APIs", "Contains APIs used to detect debuggers.", "medium", 2.0)

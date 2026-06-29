@@ -2,7 +2,7 @@
 # Pydantic models for detection rule requests and responses.
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -16,15 +16,15 @@ class ValidationResultResponse(BaseModel):
 
     id: UUID
     rule_id: UUID
-    true_positive_rate: Optional[float] = None
-    false_positive_rate: Optional[float] = None
-    coverage: Optional[float] = None
-    precision: Optional[float] = None
-    recall: Optional[float] = None
-    score: Optional[float] = None
+    true_positive_rate: float | None = None
+    false_positive_rate: float | None = None
+    coverage: float | None = None
+    precision: float | None = None
+    recall: float | None = None
+    score: float | None = None
     test_samples_count: int
     matches_count: int
-    details: Dict[str, Any]
+    details: dict[str, Any]
     created_at: datetime
 
 
@@ -38,10 +38,10 @@ class DetectionRuleResponse(BaseModel):
     rule_name: str
     version: int
     rule_text: str
-    metadata: Dict[str, Any]
-    
-    validation_results: List[ValidationResultResponse] = []
-    
+    metadata: dict[str, Any]
+
+    validation_results: list[ValidationResultResponse] = []
+
     created_at: datetime
     updated_at: datetime
 
@@ -49,5 +49,5 @@ class DetectionRuleResponse(BaseModel):
 class DetectionRuleListResponse(BaseModel):
     """List of detection rules."""
 
-    items: List[DetectionRuleResponse]
+    items: list[DetectionRuleResponse]
     total: int
