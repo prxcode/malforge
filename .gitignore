@@ -59,6 +59,7 @@ htmlcov/
 # Storage
 storage/
 uploads/
+test_samples/
 
 # OS
 .DS_Store
