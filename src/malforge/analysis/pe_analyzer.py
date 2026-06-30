@@ -1,5 +1,3 @@
-
-
 import contextlib
 import logging
 from datetime import UTC, datetime
@@ -56,7 +54,9 @@ class PEAnalyzer:
         if hasattr(self.pe, "OPTIONAL_HEADER"):
             headers["magic"] = hex(self.pe.OPTIONAL_HEADER.Magic)
             headers["subsystem"] = hex(self.pe.OPTIONAL_HEADER.Subsystem)
-            headers["dll_characteristics"] = hex(self.pe.OPTIONAL_HEADER.DllCharacteristics)
+            headers["dll_characteristics"] = hex(
+                self.pe.OPTIONAL_HEADER.DllCharacteristics
+            )
 
         return headers
 

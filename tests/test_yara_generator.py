@@ -1,5 +1,3 @@
-
-
 from malforge.detection.yara_generator import YaraGenerator
 from malforge.ioc.extractor import IOC, IndicatorType
 

@@ -1,5 +1,3 @@
-
-
 import enum
 import re
 from dataclasses import dataclass
@@ -78,7 +76,9 @@ class IOCExtractor:
                     # Filter false positives
                     if ind_type == IndicatorType.IPV4 and self._is_internal_ip(match):
                         continue
-                    if ind_type == IndicatorType.DOMAIN and self._is_benign_domain(match):
+                    if ind_type == IndicatorType.DOMAIN and self._is_benign_domain(
+                        match
+                    ):
                         continue
 
                     # Deduplicate

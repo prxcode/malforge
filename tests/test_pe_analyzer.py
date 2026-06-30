@@ -1,5 +1,3 @@
-
-
 from malforge.analysis.pe_analyzer import PEAnalyzer
 
 

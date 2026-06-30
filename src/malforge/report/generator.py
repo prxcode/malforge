@@ -1,5 +1,3 @@
-
-
 from typing import Any
 
 from malforge.ioc.extractor import IOC

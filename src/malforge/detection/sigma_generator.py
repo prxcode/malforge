@@ -1,4 +1,3 @@
-
 import datetime
 import uuid
 
@@ -10,9 +9,17 @@ class SigmaGenerator:
 
     def generate(self, sample_hash: str, iocs: list[IOC]) -> str | None:
         """Generate Sigma rules based on IOCs. Returns None if no useful IOCs found."""
-        file_paths = [ioc.value for ioc in iocs if ioc.indicator_type == IndicatorType.FILE_PATH]
-        reg_keys = [ioc.value for ioc in iocs if ioc.indicator_type == IndicatorType.REGISTRY_KEY]
-        domains = [ioc.value for ioc in iocs if ioc.indicator_type == IndicatorType.DOMAIN]
+        file_paths = [
+            ioc.value for ioc in iocs if ioc.indicator_type == IndicatorType.FILE_PATH
+        ]
+        reg_keys = [
+            ioc.value
+            for ioc in iocs
+            if ioc.indicator_type == IndicatorType.REGISTRY_KEY
+        ]
+        domains = [
+            ioc.value for ioc in iocs if ioc.indicator_type == IndicatorType.DOMAIN
+        ]
         ips = [ioc.value for ioc in iocs if ioc.indicator_type == IndicatorType.IPV4]
 
         if not file_paths and not reg_keys and not domains and not ips:

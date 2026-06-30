@@ -1,5 +1,3 @@
-
-
 from malforge.ioc.extractor import IndicatorType, IOCExtractor
 
 

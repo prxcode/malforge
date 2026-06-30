@@ -1,5 +1,3 @@
-
-
 import datetime
 from typing import Any
 
@@ -19,7 +17,9 @@ class YaraGenerator:
         rule_name = f"Malforge_{sample_hash[:8]}"
 
         meta = self._generate_meta(sample_hash)
-        strings_list, conditions = self._generate_strings_and_conditions(analysis_data, iocs or [])
+        strings_list, conditions = self._generate_strings_and_conditions(
+            analysis_data, iocs or []
+        )
 
         # Format the rule
         rule_lines = [f"rule {rule_name} {{", "    meta:"]

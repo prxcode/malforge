@@ -1,4 +1,3 @@
-
 from dataclasses import dataclass
 from typing import Any
 
@@ -143,7 +142,8 @@ class MitreMapper:
 
         # 3. Map from IOC types
         has_network_iocs = any(
-            ioc.indicator_type in (IndicatorType.URL, IndicatorType.DOMAIN, IndicatorType.IPV4)
+            ioc.indicator_type
+            in (IndicatorType.URL, IndicatorType.DOMAIN, IndicatorType.IPV4)
             for ioc in iocs
         )
         if has_network_iocs and "T1071.001" not in seen_ids:

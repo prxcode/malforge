@@ -1,5 +1,3 @@
-
-
 from typing import Any
 
 
@@ -23,8 +21,12 @@ class HeuristicsEngine:
 
         return self.flags, round(self.score, 1)
 
-    def _add_flag(self, name: str, description: str, severity: str, weight: float) -> None:
-        self.flags.append({"name": name, "description": description, "severity": severity})
+    def _add_flag(
+        self, name: str, description: str, severity: str, weight: float
+    ) -> None:
+        self.flags.append(
+            {"name": name, "description": description, "severity": severity}
+        )
         self.score += weight
 
     def _check_entropy(self) -> None:
@@ -60,10 +62,15 @@ class HeuristicsEngine:
             if name and name not in standard_sections:
                 # UPX specific
                 if name.startswith("upx"):
-                    self._add_flag("UPX Packed", "UPX section names detected.", "medium", 2.0)
+                    self._add_flag(
+                        "UPX Packed", "UPX section names detected.", "medium", 2.0
+                    )
                 else:
                     self._add_flag(
-                        "Unusual Section Name", f"Section {name} is not standard.", "low", 1.0
+                        "Unusual Section Name",
+                        f"Section {name} is not standard.",
+                        "low",
+                        1.0,
                     )
 
     def _check_suspicious_imports(self) -> None:
@@ -91,19 +98,33 @@ class HeuristicsEngine:
         hook_apis = {"setwindowshookex", "setwindowshookexa", "setwindowshookexw"}
         key_apis = {"getasynckeystate", "getkeystate"}
 
-        if any(api in all_funcs for api in hook_apis) and any(api in all_funcs for api in key_apis):
+        if any(api in all_funcs for api in hook_apis) and any(
+            api in all_funcs for api in key_apis
+        ):
             self._add_flag(
-                "Keylogging APIs", "Contains window hook and keystate APIs.", "high", 3.5
+                "Keylogging APIs",
+                "Contains window hook and keystate APIs.",
+                "high",
+                3.5,
             )
 
         # Cryptography / Ransomware
         if "cryptacquirecontexta" in all_funcs and "cryptencrypt" in all_funcs:
             self._add_flag(
-                "Cryptography APIs", "Contains crypto APIs often used in ransomware.", "medium", 2.0
+                "Cryptography APIs",
+                "Contains crypto APIs often used in ransomware.",
+                "medium",
+                2.0,
             )
 
         # Anti-Debugging
-        if "isdebuggerpresent" in all_funcs or "checkremotedebuggerpresent" in all_funcs:
+        if (
+            "isdebuggerpresent" in all_funcs
+            or "checkremotedebuggerpresent" in all_funcs
+        ):
             self._add_flag(
-                "Anti-Debugging APIs", "Contains APIs used to detect debuggers.", "medium", 2.0
+                "Anti-Debugging APIs",
+                "Contains APIs used to detect debuggers.",
+                "medium",
+                2.0,
             )

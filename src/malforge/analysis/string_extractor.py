@@ -1,5 +1,3 @@
-
-
 import re
 
 
@@ -12,7 +10,9 @@ class StringExtractor:
 
         # Pre-compile regexes
         self.ascii_re = re.compile(b"[\x20-\x7e]{" + str(min_length).encode() + b",}")
-        self.unicode_re = re.compile(b"(?:[\x20-\x7e]\x00){" + str(min_length).encode() + b",}")
+        self.unicode_re = re.compile(
+            b"(?:[\x20-\x7e]\x00){" + str(min_length).encode() + b",}"
+        )
 
         self.url_re = re.compile(r"https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+")
         self.ip_re = re.compile(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b")
@@ -24,8 +24,12 @@ class StringExtractor:
     def extract(self) -> dict[str, list[str]]:
         """Extract strings and categorize them."""
         # 1. Raw extraction
-        ascii_strings = [s.decode("ascii") for s in self.ascii_re.findall(self.file_data)]
-        unicode_strings = [s.decode("utf-16le") for s in self.unicode_re.findall(self.file_data)]
+        ascii_strings = [
+            s.decode("ascii") for s in self.ascii_re.findall(self.file_data)
+        ]
+        unicode_strings = [
+            s.decode("utf-16le") for s in self.unicode_re.findall(self.file_data)
+        ]
 
         all_strings = set(ascii_strings + unicode_strings)
 

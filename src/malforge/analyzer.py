@@ -1,5 +1,3 @@
-
-
 import hashlib
 import json
 import logging
@@ -84,8 +82,11 @@ class Analyzer:
                 all_funcs.update([f.lower() for f in imp.get("functions", [])])
 
             suspicious_keywords = [
-                "virtualalloc", "writeprocessmemory", "createremotethread",
-                "setwindowshook", "isdebuggerpresent",
+                "virtualalloc",
+                "writeprocessmemory",
+                "createremotethread",
+                "setwindowshook",
+                "isdebuggerpresent",
             ]
             for func in all_funcs:
                 for keyword in suspicious_keywords:
@@ -125,7 +126,9 @@ class Analyzer:
         )
 
         # 8. YARA validation
-        result.yara_validation = self.validator.validate_yara(result.yara_rule, file_data)
+        result.yara_validation = self.validator.validate_yara(
+            result.yara_rule, file_data
+        )
         logger.info("YARA rule validated: %s", result.yara_validation.is_valid)
 
         # 9. Sigma rule generation
@@ -145,7 +148,9 @@ class Analyzer:
             attack_mappings=result.attack_mappings,
             yara_rule=result.yara_rule,
             sigma_rule=result.sigma_rule,
-            yara_validated=result.yara_validation.is_valid if result.yara_validation else False,
+            yara_validated=(
+                result.yara_validation.is_valid if result.yara_validation else False
+            ),
         )
 
         # 11. Run plugins
@@ -159,7 +164,9 @@ class Analyzer:
 
         return result
 
-    def write_outputs(self, result: AnalysisResult, output_dir: Path) -> dict[str, Path]:
+    def write_outputs(
+        self, result: AnalysisResult, output_dir: Path
+    ) -> dict[str, Path]:
         """Write all analysis outputs to the given directory."""
         output_dir.mkdir(parents=True, exist_ok=True)
         rules_dir = output_dir / "rules"
@@ -221,7 +228,9 @@ class Analyzer:
 
         return outputs
 
-    def _compute_file_metadata(self, file_path: Path, file_data: bytes) -> dict[str, Any]:
+    def _compute_file_metadata(
+        self, file_path: Path, file_data: bytes
+    ) -> dict[str, Any]:
         """Compute file hashes and metadata."""
         return {
             "filename": file_path.name,

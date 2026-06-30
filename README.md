@@ -4,12 +4,12 @@
     <strong>Detection Engineering Toolkit</strong><br>
     Generate YARA · Sigma · MITRE ATT&CK · IOC Reports · HTML Reports<br>from a suspicious binary. One command.
   </p>
-  <p align="center">
+  <!-- <p align="center">
     <a href="https://pypi.org/project/malforge"><img src="https://img.shields.io/pypi/v/malforge?color=7c5cff&style=flat-square" alt="PyPI"></a>
     <a href="https://github.com/prxcode/malforge/actions"><img src="https://img.shields.io/github/actions/workflow/status/prxcode/malforge/ci.yml?style=flat-square&label=CI" alt="CI"></a>
     <img src="https://img.shields.io/pypi/pyversions/malforge?style=flat-square&color=3b82f6" alt="Python">
     <a href="LICENSE"><img src="https://img.shields.io/github/license/prxcode/malforge?style=flat-square" alt="License"></a>
-  </p>
+  </p> -->
 </p>
 
 ---

@@ -1,5 +1,3 @@
-
-
 import os
 import struct
 
@@ -70,7 +68,9 @@ def synthetic_pe_data() -> bytes:
     data_data += b"\x00" * (0x200 - len(data_data))
 
     # Assemble
-    full_header = dos_header + dos_stub + pe_header + opt_header + section_text + section_data
+    full_header = (
+        dos_header + dos_stub + pe_header + opt_header + section_text + section_data
+    )
     pad_size = 0x200 - len(full_header)
     if pad_size > 0:
         full_header += b"\x00" * pad_size
@@ -79,7 +79,9 @@ def synthetic_pe_data() -> bytes:
 
 
 @pytest.fixture
-def synthetic_pe_file(synthetic_pe_data: bytes, tmp_path: "os.PathLike[str]") -> "os.PathLike[str]":
+def synthetic_pe_file(
+    synthetic_pe_data: bytes, tmp_path: "os.PathLike[str]"
+) -> "os.PathLike[str]":
     """Write synthetic PE data to a temporary file."""
     pe_path = tmp_path / "test_sample.exe"
     pe_path.write_bytes(synthetic_pe_data)

@@ -1,5 +1,3 @@
-
-
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -32,7 +30,9 @@ class TestCLI:
         result = runner.invoke(main, ["analyze", "nonexistent_file.exe"])
         assert result.exit_code != 0
 
-    def test_analyze_synthetic_pe(self, synthetic_pe_file: Path, tmp_path: Path) -> None:
+    def test_analyze_synthetic_pe(
+        self, synthetic_pe_file: Path, tmp_path: Path
+    ) -> None:
         runner = CliRunner()
         output_dir = tmp_path / "cli_output"
 
@@ -54,7 +54,14 @@ class TestCLI:
 
         result = runner.invoke(
             main,
-            ["analyze", str(synthetic_pe_file), "-o", str(output_dir), "--format", "json"],
+            [
+                "analyze",
+                str(synthetic_pe_file),
+                "-o",
+                str(output_dir),
+                "--format",
+                "json",
+            ],
         )
         assert result.exit_code == 0
         assert (output_dir / "report.json").exists()

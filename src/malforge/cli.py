@@ -1,5 +1,3 @@
-
-
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -41,7 +39,8 @@ def main() -> None:
 @main.command()
 @click.argument("file", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.option(
-    "-o", "--output",
+    "-o",
+    "--output",
     type=click.Path(path_type=Path),
     default=None,
     help="Output directory (default: ./malforge_output)",
@@ -129,9 +128,11 @@ def plugins_list() -> None:
     if not loaded:
         console.print("  [dim]No plugins installed.[/dim]")
         console.print()
-        console.print("  Install plugins via pip, then register them in pyproject.toml:")
+        console.print(
+            "  Install plugins via pip, then register them in pyproject.toml:"
+        )
         console.print('  [dim][project.entry-points."malforge.plugins"][/dim]')
-        console.print("  [dim]my_plugin = \"my_package:MyPlugin\"[/dim]")
+        console.print('  [dim]my_plugin = "my_package:MyPlugin"[/dim]')
         return
 
     table = Table(title="Loaded Plugins")
@@ -156,7 +157,9 @@ def _print_summary(result: "AnalysisResult") -> None:  # type: ignore[name-defin
         cls_style = "bold green"
 
     # Summary table
-    table = Table(title="Analysis Summary", border_style="bright_magenta", show_lines=True)
+    table = Table(
+        title="Analysis Summary", border_style="bright_magenta", show_lines=True
+    )
     table.add_column("Metric", style="dim", width=20)
     table.add_column("Value")
 
@@ -175,7 +178,11 @@ def _print_summary(result: "AnalysisResult") -> None:  # type: ignore[name-defin
     )
     table.add_row(
         "Sigma Rule",
-        "[green]Generated [PASS][/green]" if result.sigma_rule else "[dim]Skipped[/dim]",
+        (
+            "[green]Generated [PASS][/green]"
+            if result.sigma_rule
+            else "[dim]Skipped[/dim]"
+        ),
     )
 
     console.print(table)

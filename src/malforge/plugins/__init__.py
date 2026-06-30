@@ -1,5 +1,3 @@
-
-
 import logging
 from importlib.metadata import entry_points
 
