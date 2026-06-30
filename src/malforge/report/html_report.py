@@ -7,7 +7,6 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader
 
-
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 
 

@@ -21,7 +21,7 @@ jobs:
       run: pip install ruff black
       
     - name: Lint with Ruff
-      run: ruff check backend/app
+      run: ruff check src/ tests/
       
     - name: Format check with Black
-      run: black --check backend/app
+      run: black --check src/ tests/

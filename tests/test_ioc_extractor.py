@@ -1,6 +1,6 @@
 
 
-from malforge.ioc.extractor import IOCExtractor, IndicatorType
+from malforge.ioc.extractor import IndicatorType, IOCExtractor
 
 
 class TestIOCExtractor:

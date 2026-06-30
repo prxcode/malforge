@@ -1,5 +1,5 @@
 <p align="center">
-  <h1 align="center">⚒ Malforge</h1>
+  <h1 align="center">Malforge</h1>
   <p align="center">
     <strong>Detection Engineering Toolkit</strong><br>
     Generate YARA · Sigma · MITRE ATT&CK · IOC Reports · HTML Reports<br>from a suspicious binary. One command.

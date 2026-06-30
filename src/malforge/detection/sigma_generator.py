@@ -1,7 +1,6 @@
 
 import datetime
 import uuid
-from typing import Any
 
 from malforge.ioc.extractor import IOC, IndicatorType
 

@@ -1,8 +1,8 @@
 
 
 import logging
-import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import click
 from rich.console import Console
@@ -11,6 +11,9 @@ from rich.table import Table
 
 from malforge import __version__
 from malforge.analyzer import Analyzer
+
+if TYPE_CHECKING:
+    from malforge.analyzer import AnalysisResult
 from malforge.plugins import load_plugins
 
 console = Console()
@@ -139,7 +142,7 @@ def plugins_list() -> None:
     console.print(table)
 
 
-def _print_summary(result: "malforge.analyzer.AnalysisResult") -> None:  # type: ignore[name-defined]
+def _print_summary(result: "AnalysisResult") -> None:  # type: ignore[name-defined]
     """Print a colorful summary table."""
     report = result.report
 
