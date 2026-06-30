@@ -1,1 +1,0 @@
-"""MAP Samples Module."""
