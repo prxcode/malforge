@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Malforge Report - {{ report.file_metadata.filename }}</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface-2: #242834;
+      --border: #2e3345;
+      --text: #e2e8f0;
+      --text-dim: #8892a8;
+      --accent: #7c5cff;
+      --accent-glow: rgba(124, 92, 255, 0.15);
+      --green: #22c55e;
+      --yellow: #eab308;
+      --red: #ef4444;
+      --orange: #f97316;
+      --blue: #3b82f6;
+      --mono: 'Courier New', Consolas, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.6;
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2rem;
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .header .meta {
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+
+    /* Badge */
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-red {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--red);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .badge-yellow {
+      background: rgba(234, 179, 8, 0.15);
+      color: var(--yellow);
+      border: 1px solid rgba(234, 179, 8, 0.3);
+    }
+
+    .badge-green {
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--green);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .badge-blue {
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--blue);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    /* Severity badges for heuristic flags */
+    .sev-high {
+      color: var(--red);
+    }
+
+    .sev-medium {
+      color: var(--orange);
+    }
+
+    .sev-low {
+      color: var(--yellow);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .card h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Summary bar */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .summary-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      text-align: center;
+    }
+
+    .summary-item .label {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .summary-item .value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-top: 0.25rem;
+    }
+
+    /* Score ring */
+    .score-ring {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      font-weight: 800;
+      margin: 0 auto 0.5rem;
+    }
+
+    .score-high {
+      background: rgba(239, 68, 68, 0.15);
+      border: 3px solid var(--red);
+      color: var(--red);
+    }
+
+    .score-medium {
+      background: rgba(234, 179, 8, 0.15);
+      border: 3px solid var(--yellow);
+      color: var(--yellow);
+    }
+
+    .score-low {
+      background: rgba(34, 197, 94, 0.15);
+      border: 3px solid var(--green);
+      color: var(--green);
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 0.6rem 0.75rem;
+      background: var(--surface-2);
+      color: var(--text-dim);
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    td {
+      padding: 0.6rem 0.75rem;
+      border-top: 1px solid var(--border);
+    }
+
+    tr:hover td {
+      background: var(--surface-2);
+    }
+
+    /* Code block */
+    .code-block {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      line-height: 1.5;
+      overflow-x: auto;
+      white-space: pre;
+      color: var(--text);
+      margin-top: 0.75rem;
+    }
+
+    /* Entropy bar */
+    .entropy-bar-container {
+      width: 100%;
+      height: 6px;
+      background: var(--surface-2);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .entropy-bar {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s;
+    }
+
+    .entropy-low {
+      background: var(--green);
+    }
+
+    .entropy-med {
+      background: var(--yellow);
+    }
+
+    .entropy-high {
+      background: var(--red);
+    }
+
+    /* Collapsible */
+    details {
+      margin-top: 0.75rem;
+    }
+
+    summary {
+      cursor: pointer;
+      color: var(--accent);
+      font-weight: 600;
+      font-size: 0.9rem;
+      padding: 0.5rem 0;
+    }
+
+    summary:hover {
+      text-decoration: underline;
+    }
+
+    /* Section divider */
+    .section-sep {
+      margin: 2rem 0;
+      border: none;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Two column layout */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .two-col {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Executive summary */
+    .exec-summary {
+      background: var(--accent-glow);
+      border: 1px solid rgba(124, 92, 255, 0.3);
+      border-radius: 10px;
+      padding: 1.25rem;
+      font-size: 0.95rem;
+      line-height: 1.7;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* MITRE link */
+    .mitre-link {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <h1>Malforge Report</h1>
+    <div class="meta">{{ report.file_metadata.filename }}</div>
+  </div>
+
+  <!-- Executive Summary -->
+  <div class="exec-summary">
+    {{ report.executive_summary }}
+  </div>
+
+  <!-- Summary Grid -->
+  <div class="summary-grid">
+    <div class="summary-item">
+      {% if report.risk_score > 60 %}
+      <div class="score-ring score-high">
+        {% elif report.risk_score > 30 %}
+        <div class="score-ring score-medium">
+          {% else %}
+          <div class="score-ring score-low">
+            {% endif %}
+            {{ report.risk_score | int }}
+          </div>
+          <div class="label">Risk Score</div>
+        </div>
+        <div class="summary-item">
+          <div class="value">
+            {% if report.classification == 'MALICIOUS' %}
+            <span class="badge badge-red">{{ report.classification }}</span>
+            {% elif report.classification == 'SUSPICIOUS' %}
+            <span class="badge badge-yellow">{{ report.classification }}</span>
+            {% else %}
+            <span class="badge badge-green">{{ report.classification }}</span>
+            {% endif %}
+          </div>
+          <div class="label">Classification</div>
+        </div>
+        <div class="summary-item">
+          <div class="value">{{ report.iocs | length }}</div>
+          <div class="label">IOCs Found</div>
+        </div>
+        <div class="summary-item">
+          <div class="value">{{ report.attack_mapping | length }}</div>
+          <div class="label">ATT&CK Techniques</div>
+        </div>
+        <div class="summary-item">
+          <div class="value">{{ report.heuristic_flags | length }}</div>
+          <div class="label">Heuristic Flags</div>
+        </div>
+        <div class="summary-item">
+          <div class="value">{{ report.heuristic_score }}</div>
+          <div class="label">Heuristic Score</div>
+        </div>
+      </div>
+
+      <!-- File Metadata -->
+      <div class="card">
+        <h2>File Metadata</h2>
+        <table>
+          <tbody>
+            <tr>
+              <td style="width:180px; color: var(--text-dim);">Filename</td>
+              <td>{{ report.file_metadata.filename }}</td>
+            </tr>
+            <tr>
+              <td style="color: var(--text-dim);">SHA-256</td>
+              <td style="font-family: var(--mono); font-size: 0.82rem;">{{ report.file_metadata.sha256 }}</td>
+            </tr>
+            <tr>
+              <td style="color: var(--text-dim);">SHA-1</td>
+              <td style="font-family: var(--mono); font-size: 0.82rem;">{{ report.file_metadata.sha1 }}</td>
+            </tr>
+            <tr>
+              <td style="color: var(--text-dim);">MD5</td>
+              <td style="font-family: var(--mono); font-size: 0.82rem;">{{ report.file_metadata.md5 }}</td>
+            </tr>
+            <tr>
+              <td style="color: var(--text-dim);">File Size</td>
+              <td>{{ report.file_metadata.file_size }} bytes</td>
+            </tr>
+            <tr>
+              <td style="color: var(--text-dim);">Entropy</td>
+              <td>{{ report.file_metadata.entropy }}</td>
+            </tr>
+            {% if report.pe_analysis and report.pe_analysis.timestamp %}
+            <tr>
+              <td style="color: var(--text-dim);">Compile Timestamp</td>
+              <td>{{ report.pe_analysis.timestamp }}</td>
+            </tr>
+            {% endif %}
+            {% if report.pe_analysis and report.pe_analysis.entry_point %}
+            <tr>
+              <td style="color: var(--text-dim);">Entry Point</td>
+              <td style="font-family: var(--mono);">{{ report.pe_analysis.entry_point }}</td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- MITRE ATT&CK Mapping -->
+      {% if report.attack_mapping %}
+      <div class="card">
+        <h2>MITRE ATT&CK Mapping</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Technique</th>
+              <th>Name</th>
+              <th>Tactic</th>
+              <th>Evidence</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in report.attack_mapping %}
+            <tr>
+              <td><a href="https://attack.mitre.org/techniques/{{ m.technique_id.replace('.', '/') }}/" target="_blank"
+                  class="mitre-link">{{ m.technique_id }}</a></td>
+              <td>{{ m.technique_name }}</td>
+              <td><span class="badge badge-blue">{{ m.tactic }}</span></td>
+              <td style="color: var(--text-dim); font-size: 0.85rem;">{{ m.evidence }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      <!-- Heuristic Analysis -->
+      {% if report.heuristic_flags %}
+      <div class="card">
+        <h2>Heuristic Analysis</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Flag</th>
+              <th>Severity</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for flag in report.heuristic_flags %}
+            <tr>
+              <td style="font-weight: 600;">{{ flag.name }}</td>
+              <td><span class="sev-{{ flag.severity }}">{{ flag.severity | upper }}</span></td>
+              <td style="color: var(--text-dim);">{{ flag.description }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      <!-- IOC Table -->
+      {% if report.iocs %}
+      <div class="card">
+        <h2>Indicators of Compromise ({{ report.iocs | length }})</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Value</th>
+              <th>Confidence</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ioc in report.iocs %}
+            <tr>
+              <td><span class="badge badge-blue">{{ ioc.type }}</span></td>
+              <td style="font-family: var(--mono); font-size: 0.82rem;">{{ ioc.value }}</td>
+              <td>{{ (ioc.confidence * 100) | int }}%</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      <!-- PE Structure -->
+      {% if report.pe_analysis and report.pe_analysis.sections %}
+      <div class="two-col">
+        <div class="card">
+          <h2>PE Sections</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Size</th>
+                <th>Entropy</th>
+                <th>Chart</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for sec in report.pe_analysis.sections %}
+              <tr>
+                <td style="font-family: var(--mono);">{{ sec.name }}</td>
+                <td>{{ sec.raw_size }}</td>
+                <td>{{ sec.entropy }}</td>
+                <td style="width: 100px;">
+                  <div class="entropy-bar-container">
+                    {% if sec.entropy > 7.2 %}
+                    <div class="entropy-bar entropy-high" style="width: {{ ((sec.entropy / 8) * 100) | int }}%;"></div>
+                    {% elif sec.entropy > 5.0 %}
+                    <div class="entropy-bar entropy-med" style="width: {{ ((sec.entropy / 8) * 100) | int }}%;"></div>
+                    {% else %}
+                    <div class="entropy-bar entropy-low" style="width: {{ ((sec.entropy / 8) * 100) | int }}%;"></div>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if report.pe_analysis.imports %}
+        <div class="card">
+          <h2>Imports</h2>
+          {% for imp in report.pe_analysis.imports %}
+          <details>
+            <summary>{{ imp.dll }} ({{ imp.functions | length }} functions)</summary>
+            <div class="code-block">{% for f in imp.functions %}{{ f }}
+              {% endfor %}</div>
+          </details>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <!-- Detection Rules -->
+      <div class="two-col">
+        {% if report.detection_rules.yara %}
+        <div class="card">
+          <h2>
+            YARA Rule
+            {% if report.detection_rules.yara_validated %}
+            <span class="badge badge-green" style="margin-left: 0.5rem;">Validated [PASS]</span>
+            {% endif %}
+          </h2>
+          <div class="code-block">{{ report.detection_rules.yara }}</div>
+        </div>
+        {% endif %}
+        {% if report.detection_rules.sigma %}
+        <div class="card">
+          <h2>Sigma Rule</h2>
+          <div class="code-block">{{ report.detection_rules.sigma }}</div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Strings -->
+      {% if report.strings.suspicious %}
+      <div class="card">
+        <h2>Suspicious Strings</h2>
+        <p style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 0.75rem;">{{ report.strings.total_count }}
+          total strings extracted, {{ report.strings.suspicious | length }} flagged as suspicious.</p>
+        <details>
+          <summary>Show all suspicious strings ({{ report.strings.suspicious | length }})</summary>
+          <div class="code-block">{% for s in report.strings.suspicious %}{{ s }}
+            {% endfor %}</div>
+        </details>
+      </div>
+      {% endif %}
+
+      <!-- Footer -->
+      <div class="footer">
+        Generated by <a href="https://github.com/prxcode/malforge">Malforge</a> - Detection Engineering Toolkit
+      </div>
+
+</body>
+
+</html>

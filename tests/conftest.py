@@ -1,19 +1,22 @@
+
+
 import os
 import struct
-from pathlib import Path
+
+import pytest
 
 
-def generate_synthetic_malware(output_path: Path) -> None:
-    """Create a minimal valid PE file with suspicious strings baked in for testing."""
-    # DOS Header (Exactly 64 bytes)
+@pytest.fixture
+def synthetic_pe_data() -> bytes:
+    """Create a minimal valid PE with suspicious strings baked in."""
     dos_header = b"MZ" + b"\x00" * 58 + struct.pack("<I", 0x80)
 
-    # DOS Stub (Exactly 64 bytes)
+    # DOS Stub
     dos_stub = b"\x0e\x1f\xba\x0e\x00\xb4\x09\xcd\x21\xb8\x01\x4c\xcd\x21"
     dos_stub += b"This program cannot be run in DOS mode.\r\r\n$"
     dos_stub += b"\x00" * (64 - len(dos_stub))
 
-    # PE Header (Exactly 24 bytes)
+    # PE Header
     pe_header = b"PE\x00\x00" + struct.pack("<H", 0x014C)  # Machine (x86)
     pe_header += struct.pack("<H", 2)  # NumberOfSections
     pe_header += struct.pack("<I", 0x5E8F1B3A)  # TimeDateStamp
@@ -21,22 +24,22 @@ def generate_synthetic_malware(output_path: Path) -> None:
     pe_header += struct.pack("<H", 0x00E0)  # SizeOfOptionalHeader
     pe_header += struct.pack("<H", 0x010F)  # Characteristics
 
-    # Optional Header (Exactly 224 bytes)
-    opt_header = struct.pack("<H", 0x010B)  # Magic (PE32)
-    opt_header += b"\x00" * 14
-    opt_header += struct.pack("<I", 0x1000)  # AddressOfEntryPoint
-    opt_header += b"\x00" * 8
-    opt_header += struct.pack("<I", 0x400000)  # ImageBase
-    opt_header += b"\x00" * 24
-    opt_header += struct.pack("<I", 0x2000)  # SizeOfImage
-    opt_header += struct.pack("<I", 0x200)  # SizeOfHeaders
-    opt_header += b"\x00" * 4
-    opt_header += struct.pack("<H", 2)  # Subsystem (GUI)
-    opt_header += b"\x00" * 22
-    opt_header += struct.pack("<I", 16)  # NumberOfRvaAndSizes
-    opt_header += b"\x00" * 128  # Data Directories
+    # Optional Header (Exactly 224 bytes / 0xE0)
+    opt_header = struct.pack("<H", 0x010B)  # Magic (PE32) (2)
+    opt_header += b"\x00" * 14  # Linker/Size data (14) -> Offset 16
+    opt_header += struct.pack("<I", 0x1000)  # AddressOfEntryPoint (4) -> Offset 20
+    opt_header += b"\x00" * 8  # BaseOfCode, BaseOfData (8) -> Offset 28
+    opt_header += struct.pack("<I", 0x400000)  # ImageBase (4) -> Offset 32
+    opt_header += b"\x00" * 24  # Alignments, OS versions, etc (24) -> Offset 56
+    opt_header += struct.pack("<I", 0x2000)  # SizeOfImage (4) -> Offset 60
+    opt_header += struct.pack("<I", 0x200)  # SizeOfHeaders (4) -> Offset 64
+    opt_header += b"\x00" * 4  # CheckSum (4) -> Offset 68
+    opt_header += struct.pack("<H", 2)  # Subsystem (GUI) (2) -> Offset 70
+    opt_header += b"\x00" * 22  # DllChars, Stack/Heap sizes (22) -> Offset 92
+    opt_header += struct.pack("<I", 16)  # NumberOfRvaAndSizes (4) -> Offset 96
+    opt_header += b"\x00" * 128  # Data Directories (128) -> Offset 224
 
-    # Sections (40 bytes each)
+    # Sections
     section_text = b".text\x00\x00\x00"
     section_text += struct.pack("<I", 0x1000)
     section_text += struct.pack("<I", 0x1000)
@@ -72,14 +75,12 @@ def generate_synthetic_malware(output_path: Path) -> None:
     if pad_size > 0:
         full_header += b"\x00" * pad_size
 
-    pe_data = full_header + text_data + data_data
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_bytes(pe_data)
-    print(f"Generated synthetic test malware at: {output_path}")
+    return full_header + text_data + data_data
 
 
-if __name__ == "__main__":
-    out_dir = Path(__file__).parent.parent / "test_samples"
-    out_file = out_dir / "synthetic_malware.exe"
-    generate_synthetic_malware(out_file)
+@pytest.fixture
+def synthetic_pe_file(synthetic_pe_data: bytes, tmp_path: "os.PathLike[str]") -> "os.PathLike[str]":
+    """Write synthetic PE data to a temporary file."""
+    pe_path = tmp_path / "test_sample.exe"
+    pe_path.write_bytes(synthetic_pe_data)
+    return pe_path
