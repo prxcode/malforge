@@ -1,58 +1,67 @@
+import yara
+
+from malforge.detection.validator import DetectionValidator
 from malforge.detection.yara_generator import YaraGenerator
 from malforge.ioc.extractor import IOC, IndicatorType
 
+SHA256 = "ab" * 32
 
-class TestYaraGenerator:
-    def test_basic_generation(self) -> None:
-        gen = YaraGenerator()
-        analysis_data = {"suspicious_apis": ["VirtualAllocEx", "CreateRemoteThread"]}
-        rule = gen.generate("a" * 64, analysis_data)
 
-        assert "rule Malforge_" in rule
-        assert "meta:" in rule
-        assert "strings:" in rule
-        assert "condition:" in rule
-        assert "uint16(0) == 0x5a4d" in rule
+def ioc(ind_type: IndicatorType, value: str) -> IOC:
+    return IOC(ind_type, value, 0.8, "test", "")
 
-    def test_with_iocs(self) -> None:
-        gen = YaraGenerator()
-        analysis_data = {"suspicious_apis": []}
-        iocs = [
-            IOC(
-                indicator_type=IndicatorType.URL,
-                value="http://evil.com/payload",
-                confidence=0.8,
-                source="static_strings",
-                context="test",
-            ),
-            IOC(
-                indicator_type=IndicatorType.IPV4,
-                value="10.20.30.40",
-                confidence=0.8,
-                source="static_strings",
-                context="test",
-            ),
-        ]
-        rule = gen.generate("b" * 64, analysis_data, iocs)
 
-        assert "$ioc_url0" in rule
-        assert "$ioc_ip1" in rule
-        assert "http://evil.com/payload" in rule
+def test_rule_from_apis() -> None:
+    rule = YaraGenerator().generate(SHA256, ["VirtualAllocEx", "CreateRemoteThread"])
 
-    def test_empty_analysis(self) -> None:
-        gen = YaraGenerator()
-        analysis_data = {"suspicious_apis": []}
-        rule = gen.generate("c" * 64, analysis_data)
+    assert rule is not None
+    assert rule.startswith("rule Malforge_abababab {")
+    assert '$api0 = "VirtualAllocEx" ascii wide nocase' in rule
+    assert "and all of ($api*)" in rule
+    yara.compile(source=rule)
 
-        # Should still produce a valid rule with MZ check
-        assert "rule Malforge_" in rule
-        assert "uint16(0) == 0x5a4d" in rule
 
-    def test_meta_fields(self) -> None:
-        gen = YaraGenerator()
-        rule = gen.generate("d" * 64, {"suspicious_apis": []})
+def test_rule_from_network_iocs_only() -> None:
+    iocs = [
+        ioc(IndicatorType.URL, "http://evil.com/payload"),
+        ioc(IndicatorType.IPV4, "203.0.113.5"),
+        ioc(IndicatorType.REGISTRY_KEY, r"HKCU\Software\Run"),
+    ]
 
-        assert "author" in rule
-        assert "Malforge" in rule
-        assert "hash" in rule
-        assert "tlp" in rule
+    rule = YaraGenerator().generate(SHA256, [], iocs)
+
+    assert rule is not None
+    assert '$ioc_url0 = "http://evil.com/payload"' in rule
+    assert '$ioc_ip1 = "203.0.113.5"' in rule
+    assert "Software" not in rule
+    yara.compile(source=rule)
+
+
+def test_escapes_quotes_and_backslashes() -> None:
+    rule = YaraGenerator().generate(SHA256, ['Weird"Api\\Name'])
+
+    assert rule is not None
+    yara.compile(source=rule)
+
+
+def test_no_rule_without_indicators() -> None:
+    assert YaraGenerator().generate(SHA256, [], []) is None
+
+
+def test_validator_reports_match(pe_bytes: bytes) -> None:
+    rule = YaraGenerator().generate(SHA256, [], [ioc(IndicatorType.IPV4, "203.0.113.50")])
+    assert rule is not None
+
+    result = DetectionValidator().validate_yara(rule, pe_bytes)
+
+    assert result.is_valid
+    assert result.true_positive
+    assert result.error is None
+    assert result.matches[0]["strings"][0]["identifier"] == "$ioc_ip0"
+
+
+def test_validator_reports_syntax_errors() -> None:
+    result = DetectionValidator().validate_yara("rule broken {", b"")
+
+    assert not result.is_valid
+    assert result.error is not None

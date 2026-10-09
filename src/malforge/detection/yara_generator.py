@@ -1,108 +1,62 @@
 import datetime
-from typing import Any
 
 from malforge.ioc.extractor import IOC, IndicatorType
 
+MAX_IOC_STRINGS = 10
+
+IOC_PREFIXES = {
+    IndicatorType.URL: "url",
+    IndicatorType.DOMAIN: "dom",
+    IndicatorType.IPV4: "ip",
+}
+
+
+def escape_yara_string(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
 
 class YaraGenerator:
-    """Generates YARA rules from analysis artifacts."""
+    """Generates a YARA rule from suspicious imports and network IOCs."""
 
     def generate(
         self,
         sample_hash: str,
-        analysis_data: dict[str, Any],
+        suspicious_apis: list[str],
         iocs: list[IOC] | None = None,
-    ) -> str:
-        """Generate a complete YARA rule."""
-        rule_name = f"Malforge_{sample_hash[:8]}"
+    ) -> str | None:
+        """Return the rule source, or None when there is nothing specific to match on."""
+        api_strings = [
+            f'$api{i} = "{escape_yara_string(api)}" ascii wide nocase'
+            for i, api in enumerate(suspicious_apis)
+        ]
+        network_iocs = [ioc for ioc in iocs or [] if ioc.indicator_type in IOC_PREFIXES]
+        ioc_strings = [
+            f'$ioc_{IOC_PREFIXES[ioc.indicator_type]}{i} = "{escape_yara_string(ioc.value)}" ascii wide'
+            for i, ioc in enumerate(network_iocs[:MAX_IOC_STRINGS])
+        ]
 
-        meta = self._generate_meta(sample_hash)
-        strings_list, conditions = self._generate_strings_and_conditions(
-            analysis_data, iocs or []
-        )
+        if not api_strings and not ioc_strings:
+            return None
 
-        # Format the rule
-        rule_lines = [f"rule {rule_name} {{", "    meta:"]
+        conditions = ["uint16(0) == 0x5a4d"]
+        if api_strings:
+            conditions.append("3 of ($api*)" if len(api_strings) > 3 else "all of ($api*)")
+        if ioc_strings:
+            conditions.append("2 of ($ioc_*)" if len(ioc_strings) > 3 else "any of ($ioc_*)")
 
-        for k, v in meta.items():
-            rule_lines.append(f'        {k} = "{v}"')
-
-        if strings_list:
-            rule_lines.append("")
-            rule_lines.append("    strings:")
-            for s in strings_list:
-                rule_lines.append(f"        {s}")
-
-        rule_lines.append("")
-        rule_lines.append("    condition:")
-
-        for i, c in enumerate(conditions):
-            if i == 0:
-                rule_lines.append(f"        {c}")
-            else:
-                rule_lines.append(f"        and {c}")
-
-        rule_lines.append("}")
-
-        return "\n".join(rule_lines)
-
-    def _generate_meta(self, sample_hash: str) -> dict[str, str]:
-        """Generate standard YARA metadata."""
-        return {
+        meta = {
             "author": "Malforge",
-            "description": "Auto-generated detection rule from static analysis.",
+            "description": "Auto-generated from static analysis",
             "date": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d"),
             "hash": sample_hash,
-            "tlp": "WHITE",
-            "version": "1.0",
+            "tlp": "CLEAR",
         }
 
-    def _generate_strings_and_conditions(
-        self,
-        analysis_data: dict[str, Any],
-        iocs: list[IOC],
-    ) -> tuple[list[str], list[str]]:
-        """Generate YARA strings and corresponding conditions."""
-        strings = []
-        conditions = []
-
-        # Basic PE condition
-        conditions.append("uint16(0) == 0x5a4d")  # MZ signature
-
-        str_count = 0
-
-        # Use suspicious API strings
-        suspicious = analysis_data.get("suspicious_apis", [])
-        for s in suspicious:
-            s_escaped = s.replace('"', '\\"')
-            strings.append(f'$s{str_count} = "{s_escaped}" ascii wide nocase')
-            str_count += 1
-
-        # Add network IOCs as YARA strings
-        ioc_count = 0
-        for ioc in iocs:
-            if ioc.indicator_type == IndicatorType.URL:
-                url_escaped = ioc.value.replace('"', '\\"')
-                strings.append(f'$ioc_url{ioc_count} = "{url_escaped}" ascii wide')
-                ioc_count += 1
-            elif ioc.indicator_type == IndicatorType.IPV4:
-                strings.append(f'$ioc_ip{ioc_count} = "{ioc.value}" ascii wide')
-                ioc_count += 1
-            elif ioc.indicator_type == IndicatorType.DOMAIN:
-                strings.append(f'$ioc_dom{ioc_count} = "{ioc.value}" ascii wide')
-                ioc_count += 1
-
-        # Build conditions based on string counts
-        if str_count > 0:
-            if str_count > 3:
-                conditions.append("3 of ($s*)")
-            else:
-                conditions.append("all of ($s*)")
-
-        if ioc_count > 0:
-            if ioc_count > 3:
-                conditions.append("2 of ($ioc_*)")
-            else:
-                conditions.append("any of ($ioc_*)")
-
-        return strings, conditions
+        lines = [f"rule Malforge_{sample_hash[:8]} {{", "    meta:"]
+        lines += [f'        {key} = "{escape_yara_string(value)}"' for key, value in meta.items()]
+        lines += ["", "    strings:"]
+        lines += [f"        {s}" for s in api_strings + ioc_strings]
+        lines += ["", "    condition:", f"        {conditions[0]}"]
+        lines += [f"        and {c}" for c in conditions[1:]]
+        lines.append("}")
+        return "\n".join(lines) + "\n"

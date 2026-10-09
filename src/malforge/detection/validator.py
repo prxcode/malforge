@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ValidationResult:
-    """Result of validating a detection rule."""
+    """Outcome of compiling a YARA rule and running it against its source sample."""
 
     is_valid: bool = False
     true_positive: bool = False
@@ -18,42 +18,38 @@ class ValidationResult:
 
 
 class DetectionValidator:
-    """Validates and tests detection rules."""
-
-    def validate_yara(self, rule_text: str, test_file_data: bytes) -> ValidationResult:
-        """
-        Compile the YARA rule and run it against the provided file data.
-        Returns validation metrics.
-        """
+    def validate_yara(self, rule_text: str, sample_data: bytes) -> ValidationResult:
         result = ValidationResult()
 
         try:
-            # Test 1: Syntax compilation
-            compiled_rule = yara.compile(source=rule_text)
-            result.is_valid = True
-
-            # Test 2: True positive against the generating sample
-            matches = compiled_rule.match(data=test_file_data)
-
-            if matches:
-                result.true_positive = True
-                for match in matches:
-                    match_info: dict[str, Any] = {"rule": match.rule, "strings": []}
-                    for s in match.strings:
-                        match_info["strings"].append(
-                            {
-                                "offset": s[0],
-                                "identifier": s[1],
-                                "data": s[2][:20],
-                            }
-                        )
-                    result.matches.append(match_info)
-
-        except yara.SyntaxError as e:
-            result.error = f"Syntax error: {e!s}"
+            rules = yara.compile(source=rule_text)
+        except yara.Error as e:
+            result.error = f"Compilation failed: {e}"
             logger.error("YARA compilation failed: %s", e)
-        except Exception as e:
-            result.error = f"Validation error: {e!s}"
-            logger.error("YARA validation failed: %s", e)
+            return result
+        result.is_valid = True
 
+        try:
+            matches = rules.match(data=sample_data)
+        except yara.Error as e:
+            result.error = f"Matching failed: {e}"
+            logger.error("YARA matching failed: %s", e)
+            return result
+
+        result.true_positive = bool(matches)
+        for match in matches:
+            result.matches.append(
+                {
+                    "rule": match.rule,
+                    "strings": [
+                        {
+                            "identifier": s.identifier,
+                            "offset": s.instances[0].offset,
+                            "data": s.instances[0].matched_data[:32].hex(),
+                        }
+                        for s in match.strings
+                        if s.instances
+                    ],
+                }
+            )
         return result
