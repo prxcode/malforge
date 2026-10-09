@@ -1,34 +1,74 @@
-# Malforge API
+# Python API
 
-The Malforge pipeline is exposed as a Python library, allowing you to integrate it into your own scripts and tools.
-
-## Example Usage
+## Running an analysis
 
 ```python
 from pathlib import Path
+
 from malforge.analyzer import Analyzer
 
-file_path = Path("sample.exe")
 analyzer = Analyzer()
+result = analyzer.analyze(Path("sample.exe"))
 
-# Run the 10-stage pipeline
-result = analyzer.analyze(file_path)
+print(result.report["classification"], result.report["risk_score"])
+print(result.file_metadata["sha256"])
+for ioc in result.iocs:
+    print(ioc.indicator_type, ioc.value, ioc.confidence)
 
-# Access typed data
-print(f"Risk Score: {result.report['risk_score']}")
-print(f"File Hashes: {result.file_metadata['sha256']}")
-print(f"Number of IOCs extracted: {len(result.iocs)}")
-print(f"Number of ATT&CK techniques: {len(result.attack_mappings)}")
-
-# Write standard outputs to a directory
-output_dir = Path("./results")
-analyzer.write_outputs(result, output_dir)
+paths = analyzer.write_outputs(result, Path("results"), formats=["json"])
 ```
 
-## Core Classes
+`Analyzer` accepts keyword arguments:
 
-- `malforge.analyzer.Analyzer`: The main orchestrator class.
-- `malforge.ioc.extractor.IOCExtractor`: Extracts `malforge.ioc.extractor.IOC` objects from text.
-- `malforge.detection.yara_generator.YaraGenerator`: Generates YARA rules.
-- `malforge.detection.sigma_generator.SigmaGenerator`: Generates Sigma rules.
-- `malforge.plugins.base.MalforgePlugin`: Base class for creating custom plugins.
+| Argument  | Default            | Effect                                          |
+| --------- | ------------------ | ----------------------------------------------- |
+| `yara`    | `True`             | Generate and validate a YARA rule               |
+| `sigma`   | `True`             | Generate Sigma rules                            |
+| `plugins` | installed plugins  | List of `MalforgePlugin` instances; `[]` for none |
+
+`write_outputs()` returns a dict that maps each output kind (`report_json`,
+`report_html`, `iocs`, `mitre`, `yara`, `sigma`) to the path it was written to.
+
+## AnalysisResult
+
+Defined in `malforge.result`.
+
+| Field              | Type                         |
+| ------------------ | ---------------------------- |
+| `file_metadata`    | `dict` with filename, size, md5, sha1, sha256, entropy |
+| `pe_data`          | `dict` or `None` for non-PE files |
+| `strings`          | `ExtractedStrings` with `all` and `suspicious` lists |
+| `heuristic_flags`  | `list[HeuristicFlag]`        |
+| `heuristic_score`  | `float`, 0-10                |
+| `suspicious_apis`  | `list[str]`                  |
+| `iocs`             | `list[IOC]`                  |
+| `attack_mappings`  | `list[AttackMapping]`        |
+| `yara_rule`        | `str` or `None`              |
+| `yara_validation`  | `ValidationResult` or `None` |
+| `sigma_rule`       | `str` or `None`              |
+| `report`           | `dict`, the JSON report      |
+
+## Using components on their own
+
+Each stage can be used directly:
+
+```python
+from malforge.ioc.extractor import IOCExtractor
+from malforge.detection.yara_generator import YaraGenerator
+from malforge.detection.sigma_generator import SigmaGenerator
+
+iocs = IOCExtractor().extract_from_strings(["beacon to http://c2.example.ru/gate"])
+yara_rule = YaraGenerator().generate("<sha256>", suspicious_apis=[], iocs=iocs)
+sigma_rules = SigmaGenerator().generate("<sha256>", iocs)
+```
+
+| Class                                              | Purpose                          |
+| -------------------------------------------------- | -------------------------------- |
+| `malforge.analysis.pe_analyzer.PEAnalyzer`         | Parse a PE file                  |
+| `malforge.analysis.string_extractor.StringExtractor` | Extract strings                |
+| `malforge.analysis.heuristics.HeuristicsEngine`    | Score parsed PE data             |
+| `malforge.ioc.extractor.IOCExtractor`              | Extract IOCs from strings        |
+| `malforge.mitre.mapper.MitreMapper`                | Map findings to ATT&CK           |
+| `malforge.detection.yara_generator.YaraGenerator`  | Build a YARA rule                |
+| `malforge.detection.sigma_generator.SigmaGenerator` | Build Sigma rules               |
+| `malforge.detection.validator.DetectionValidator`  | Compile and test a YARA rule     |
