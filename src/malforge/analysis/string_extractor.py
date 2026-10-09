@@ -1,96 +1,51 @@
 import re
+from dataclasses import dataclass, field
+
+SUSPICIOUS_KEYWORDS = (
+    "cmd.exe",
+    "powershell",
+    "rundll32",
+    "regsvr32",
+    "mshta",
+    "certutil",
+    "bitsadmin",
+    "schtasks",
+    "wmic",
+    "winmgmts",
+    "vssadmin",
+    "shadowcopy",
+    "bcdedit",
+    "wevtutil",
+    "virtualallocex",
+    "writeprocessmemory",
+    "createremotethread",
+    "setwindowshook",
+)
+
+
+@dataclass
+class ExtractedStrings:
+    all: list[str] = field(default_factory=list)
+    suspicious: list[str] = field(default_factory=list)
 
 
 class StringExtractor:
-    """Extracts strings and attempts to classify them as IPs, Domains, URLs, etc."""
+    """Extracts printable ASCII and UTF-16LE strings from binary data."""
 
-    def __init__(self, file_data: bytes, min_length: int = 5):
+    def __init__(self, file_data: bytes, min_length: int = 5) -> None:
         self.file_data = file_data
-        self.min_length = min_length
+        self._ascii_re = re.compile(rb"[\x20-\x7e]{%d,}" % min_length)
+        self._utf16_re = re.compile(rb"(?:[\x20-\x7e]\x00){%d,}" % min_length)
 
-        # Pre-compile regexes
-        self.ascii_re = re.compile(b"[\x20-\x7e]{" + str(min_length).encode() + b",}")
-        self.unicode_re = re.compile(
-            b"(?:[\x20-\x7e]\x00){" + str(min_length).encode() + b",}"
-        )
+    def extract(self) -> ExtractedStrings:
+        found = {s.decode("ascii") for s in self._ascii_re.findall(self.file_data)}
+        found.update(s.decode("utf-16le") for s in self._utf16_re.findall(self.file_data))
 
-        self.url_re = re.compile(r"https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+")
-        self.ip_re = re.compile(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b")
-        self.registry_re = re.compile(
-            r"(?:HKLM|HKCU|HKCR|HKU|HKCC|HKEY_LOCAL_MACHINE|HKEY_CURRENT_USER)\\[\\\w\-]+"
-        )
-        self.file_path_re = re.compile(r"(?:[a-zA-Z]:\\|\b\\\\)[\\\w\-. ]+")
+        all_strings = sorted(found)
+        suspicious = [s for s in all_strings if self._is_suspicious(s)]
+        return ExtractedStrings(all=all_strings, suspicious=suspicious)
 
-    def extract(self) -> dict[str, list[str]]:
-        """Extract strings and categorize them."""
-        # 1. Raw extraction
-        ascii_strings = [
-            s.decode("ascii") for s in self.ascii_re.findall(self.file_data)
-        ]
-        unicode_strings = [
-            s.decode("utf-16le") for s in self.unicode_re.findall(self.file_data)
-        ]
-
-        all_strings = set(ascii_strings + unicode_strings)
-
-        # 2. Categorization
-        categorized: dict[str, list[str]] = {
-            "all": list(all_strings),
-            "urls": [],
-            "ips": [],
-            "registry": [],
-            "paths": [],
-            "suspicious": [],
-        }
-
-        # Filter sets to avoid duplicates
-        urls: set[str] = set()
-        ips: set[str] = set()
-        registry: set[str] = set()
-        paths: set[str] = set()
-
-        suspicious_keywords = [
-            "cmd.exe",
-            "powershell",
-            "virtualalloc",
-            "writeprocessmemory",
-            "createremotethread",
-            "setwindowshook",
-            "loadlibrary",
-            "getprocaddress",
-            "vssadmin",
-            "shadowcopy",
-            "wevtutil",
-            "schtasks",
-            "wmi",
-        ]
-
-        for s in all_strings:
-            # URLs
-            for match in self.url_re.findall(s):
-                urls.add(match)
-
-            # IPs
-            for match in self.ip_re.findall(s):
-                ips.add(match)
-
-            # Registry
-            for match in self.registry_re.findall(s):
-                registry.add(match)
-
-            # Paths
-            for match in self.file_path_re.findall(s):
-                if len(match) > 5:  # Filter out very short noise
-                    paths.add(match)
-
-            # Suspicious
-            s_lower = s.lower()
-            if any(keyword in s_lower for keyword in suspicious_keywords):
-                categorized["suspicious"].append(s)
-
-        categorized["urls"] = list(urls)
-        categorized["ips"] = list(ips)
-        categorized["registry"] = list(registry)
-        categorized["paths"] = list(paths)
-
-        return categorized
+    @staticmethod
+    def _is_suspicious(s: str) -> bool:
+        lowered = s.lower()
+        return any(keyword in lowered for keyword in SUSPICIOUS_KEYWORDS)

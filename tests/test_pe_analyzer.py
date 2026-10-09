@@ -1,42 +1,28 @@
 from malforge.analysis.pe_analyzer import PEAnalyzer
 
 
-class TestPEAnalyzer:
-    def test_valid_pe(self, synthetic_pe_data: bytes) -> None:
-        analyzer = PEAnalyzer(synthetic_pe_data)
-        assert analyzer.is_valid is True
+def test_parses_synthetic_pe(pe_bytes: bytes) -> None:
+    analyzer = PEAnalyzer(pe_bytes)
+    assert analyzer.is_valid
 
-        result = analyzer.analyze()
-        assert "error" not in result
-        assert "headers" in result
-        assert "sections" in result
-        assert "imports" in result
-        assert "exports" in result
-        assert "entry_point" in result
-        assert "timestamp" in result
+    pe = analyzer.analyze()
+    assert pe is not None
+    assert [s["name"] for s in pe["sections"]] == [".text", ".data"]
+    assert pe["entry_point"] == "0x1000"
+    assert pe["image_base"] == "0x400000"
+    assert pe["timestamp"] == "2020-04-09T12:55:22+00:00"
+    assert pe["imports"] == []
+    assert pe["exports"] == []
 
-    def test_sections_extracted(self, synthetic_pe_data: bytes) -> None:
-        analyzer = PEAnalyzer(synthetic_pe_data)
-        result = analyzer.analyze()
-        sections = result["sections"]
 
-        assert len(sections) >= 1
-        for sec in sections:
-            assert "name" in sec
-            assert "entropy" in sec
-            assert "raw_size" in sec
+def test_sections_have_entropy(pe_bytes: bytes) -> None:
+    pe = PEAnalyzer(pe_bytes).analyze()
+    assert pe is not None
+    for section in pe["sections"]:
+        assert 0.0 <= section["entropy"] <= 8.0
 
-    def test_invalid_pe(self) -> None:
-        analyzer = PEAnalyzer(b"this is not a PE file")
-        assert analyzer.is_valid is False
 
-        result = analyzer.analyze()
-        assert result == {"error": "Invalid PE file"}
-
-    def test_timestamp_format(self, synthetic_pe_data: bytes) -> None:
-        analyzer = PEAnalyzer(synthetic_pe_data)
-        result = analyzer.analyze()
-        # Should be an ISO format timestamp or "Invalid" / "Unknown"
-        ts = result["timestamp"]
-        assert isinstance(ts, str)
-        assert ts != ""
+def test_rejects_non_pe_data() -> None:
+    analyzer = PEAnalyzer(b"definitely not a PE file")
+    assert not analyzer.is_valid
+    assert analyzer.analyze() is None
