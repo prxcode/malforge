@@ -20,7 +20,7 @@
       --red: #ef4444;
       --orange: #f97316;
       --blue: #3b82f6;
-      --mono: 'Courier New', Consolas, monospace;
+      --mono: Consolas, 'Courier New', monospace;
       --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
 
@@ -49,7 +49,6 @@
       text-decoration: underline;
     }
 
-    /* Header */
     .header {
       display: flex;
       align-items: center;
@@ -62,9 +61,6 @@
     .header h1 {
       font-size: 1.5rem;
       font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
     }
 
     .header .meta {
@@ -72,7 +68,6 @@
       font-size: 0.85rem;
     }
 
-    /* Badge */
     .badge {
       display: inline-block;
       padding: 0.25rem 0.75rem;
@@ -81,6 +76,10 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
+    }
+
+    h2 .badge {
+      margin-left: 0.5rem;
     }
 
     .badge-red {
@@ -107,7 +106,6 @@
       border: 1px solid rgba(59, 130, 246, 0.3);
     }
 
-    /* Severity badges for heuristic flags */
     .sev-high {
       color: var(--red);
     }
@@ -120,25 +118,21 @@
       color: var(--yellow);
     }
 
-    /* Cards */
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 1.5rem;
       margin-bottom: 1.5rem;
+      min-width: 0;
     }
 
     .card h2 {
       font-size: 1.1rem;
       font-weight: 600;
       margin-bottom: 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
     }
 
-    /* Summary bar */
     .summary-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -167,7 +161,6 @@
       margin-top: 0.25rem;
     }
 
-    /* Score ring */
     .score-ring {
       width: 80px;
       height: 80px;
@@ -198,7 +191,6 @@
       color: var(--green);
     }
 
-    /* Tables */
     table {
       width: 100%;
       border-collapse: collapse;
@@ -219,13 +211,32 @@
     td {
       padding: 0.6rem 0.75rem;
       border-top: 1px solid var(--border);
+      word-break: break-word;
     }
 
     tr:hover td {
       background: var(--surface-2);
     }
 
-    /* Code block */
+    .kv td:first-child {
+      width: 180px;
+      color: var(--text-dim);
+    }
+
+    .mono {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+    }
+
+    .dim {
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+
+    .strong {
+      font-weight: 600;
+    }
+
     .code-block {
       background: var(--surface-2);
       border: 1px solid var(--border);
@@ -235,12 +246,14 @@
       font-size: 0.82rem;
       line-height: 1.5;
       overflow-x: auto;
-      white-space: pre;
       color: var(--text);
       margin-top: 0.75rem;
     }
 
-    /* Entropy bar */
+    .bar-cell {
+      width: 100px;
+    }
+
     .entropy-bar-container {
       width: 100%;
       height: 6px;
@@ -252,7 +265,6 @@
     .entropy-bar {
       height: 100%;
       border-radius: 3px;
-      transition: width 0.3s;
     }
 
     .entropy-low {
@@ -267,7 +279,6 @@
       background: var(--red);
     }
 
-    /* Collapsible */
     details {
       margin-top: 0.75rem;
     }
@@ -280,18 +291,6 @@
       padding: 0.5rem 0;
     }
 
-    summary:hover {
-      text-decoration: underline;
-    }
-
-    /* Section divider */
-    .section-sep {
-      margin: 2rem 0;
-      border: none;
-      border-top: 1px solid var(--border);
-    }
-
-    /* Two column layout */
     .two-col {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -299,12 +298,15 @@
     }
 
     @media (max-width: 768px) {
+      body {
+        padding: 1rem;
+      }
+
       .two-col {
         grid-template-columns: 1fr;
       }
     }
 
-    /* Executive summary */
     .exec-summary {
       background: var(--accent-glow);
       border: 1px solid rgba(124, 92, 255, 0.3);
@@ -315,7 +317,6 @@
       margin-bottom: 1.5rem;
     }
 
-    /* Footer */
     .footer {
       text-align: center;
       color: var(--text-dim);
@@ -324,286 +325,207 @@
       padding-top: 1.5rem;
       border-top: 1px solid var(--border);
     }
-
-    /* MITRE link */
-    .mitre-link {
-      font-family: var(--mono);
-      font-size: 0.85rem;
-    }
   </style>
 </head>
 
 <body>
-
-  <!-- Header -->
-  <div class="header">
+  <header class="header">
     <h1>Malforge Report</h1>
     <div class="meta">{{ report.file_metadata.filename }}</div>
-  </div>
+  </header>
 
-  <!-- Executive Summary -->
-  <div class="exec-summary">
-    {{ report.executive_summary }}
-  </div>
+  <div class="exec-summary">{{ report.executive_summary }}</div>
 
-  <!-- Summary Grid -->
+  {% set level = {'MALICIOUS': 'high', 'SUSPICIOUS': 'medium'}.get(report.classification, 'low') %}
+  {% set badge = {'high': 'badge-red', 'medium': 'badge-yellow', 'low': 'badge-green'}[level] %}
   <div class="summary-grid">
     <div class="summary-item">
-      {% if report.risk_score > 60 %}
-      <div class="score-ring score-high">
-        {% elif report.risk_score > 30 %}
-        <div class="score-ring score-medium">
-          {% else %}
-          <div class="score-ring score-low">
-            {% endif %}
-            {{ report.risk_score | int }}
-          </div>
-          <div class="label">Risk Score</div>
-        </div>
-        <div class="summary-item">
-          <div class="value">
-            {% if report.classification == 'MALICIOUS' %}
-            <span class="badge badge-red">{{ report.classification }}</span>
-            {% elif report.classification == 'SUSPICIOUS' %}
-            <span class="badge badge-yellow">{{ report.classification }}</span>
-            {% else %}
-            <span class="badge badge-green">{{ report.classification }}</span>
-            {% endif %}
-          </div>
-          <div class="label">Classification</div>
-        </div>
-        <div class="summary-item">
-          <div class="value">{{ report.iocs | length }}</div>
-          <div class="label">IOCs Found</div>
-        </div>
-        <div class="summary-item">
-          <div class="value">{{ report.attack_mapping | length }}</div>
-          <div class="label">ATT&CK Techniques</div>
-        </div>
-        <div class="summary-item">
-          <div class="value">{{ report.heuristic_flags | length }}</div>
-          <div class="label">Heuristic Flags</div>
-        </div>
-        <div class="summary-item">
-          <div class="value">{{ report.heuristic_score }}</div>
-          <div class="label">Heuristic Score</div>
-        </div>
-      </div>
+      <div class="score-ring score-{{ level }}">{{ report.risk_score | int }}</div>
+      <div class="label">Risk Score</div>
+    </div>
+    <div class="summary-item">
+      <div class="value"><span class="badge {{ badge }}">{{ report.classification }}</span></div>
+      <div class="label">Classification</div>
+    </div>
+    <div class="summary-item">
+      <div class="value">{{ report.iocs | length }}</div>
+      <div class="label">IOCs Found</div>
+    </div>
+    <div class="summary-item">
+      <div class="value">{{ report.attack_mapping | length }}</div>
+      <div class="label">ATT&amp;CK Techniques</div>
+    </div>
+    <div class="summary-item">
+      <div class="value">{{ report.heuristic_flags | length }}</div>
+      <div class="label">Heuristic Flags</div>
+    </div>
+    <div class="summary-item">
+      <div class="value">{{ report.heuristic_score }}</div>
+      <div class="label">Heuristic Score</div>
+    </div>
+  </div>
 
-      <!-- File Metadata -->
-      <div class="card">
-        <h2>File Metadata</h2>
-        <table>
-          <tbody>
-            <tr>
-              <td style="width:180px; color: var(--text-dim);">Filename</td>
-              <td>{{ report.file_metadata.filename }}</td>
-            </tr>
-            <tr>
-              <td style="color: var(--text-dim);">SHA-256</td>
-              <td style="font-family: var(--mono); font-size: 0.82rem;">{{ report.file_metadata.sha256 }}</td>
-            </tr>
-            <tr>
-              <td style="color: var(--text-dim);">SHA-1</td>
-              <td style="font-family: var(--mono); font-size: 0.82rem;">{{ report.file_metadata.sha1 }}</td>
-            </tr>
-            <tr>
-              <td style="color: var(--text-dim);">MD5</td>
-              <td style="font-family: var(--mono); font-size: 0.82rem;">{{ report.file_metadata.md5 }}</td>
-            </tr>
-            <tr>
-              <td style="color: var(--text-dim);">File Size</td>
-              <td>{{ report.file_metadata.file_size }} bytes</td>
-            </tr>
-            <tr>
-              <td style="color: var(--text-dim);">Entropy</td>
-              <td>{{ report.file_metadata.entropy }}</td>
-            </tr>
-            {% if report.pe_analysis and report.pe_analysis.timestamp %}
-            <tr>
-              <td style="color: var(--text-dim);">Compile Timestamp</td>
-              <td>{{ report.pe_analysis.timestamp }}</td>
-            </tr>
-            {% endif %}
-            {% if report.pe_analysis and report.pe_analysis.entry_point %}
-            <tr>
-              <td style="color: var(--text-dim);">Entry Point</td>
-              <td style="font-family: var(--mono);">{{ report.pe_analysis.entry_point }}</td>
-            </tr>
-            {% endif %}
-          </tbody>
-        </table>
-      </div>
+  <section class="card">
+    <h2>File Metadata</h2>
+    <table class="kv">
+      <tbody>
+        <tr><td>Filename</td><td>{{ report.file_metadata.filename }}</td></tr>
+        <tr><td>SHA-256</td><td class="mono">{{ report.file_metadata.sha256 }}</td></tr>
+        <tr><td>SHA-1</td><td class="mono">{{ report.file_metadata.sha1 }}</td></tr>
+        <tr><td>MD5</td><td class="mono">{{ report.file_metadata.md5 }}</td></tr>
+        <tr><td>File Size</td><td>{{ "{:,}".format(report.file_metadata.file_size) }} bytes</td></tr>
+        <tr><td>Entropy</td><td>{{ report.file_metadata.entropy }}</td></tr>
+        {% if report.pe_analysis and report.pe_analysis.timestamp %}
+        <tr><td>Compile Timestamp</td><td>{{ report.pe_analysis.timestamp }}</td></tr>
+        {% endif %}
+        {% if report.pe_analysis and report.pe_analysis.entry_point %}
+        <tr><td>Entry Point</td><td class="mono">{{ report.pe_analysis.entry_point }}</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </section>
 
-      <!-- MITRE ATT&CK Mapping -->
-      {% if report.attack_mapping %}
-      <div class="card">
-        <h2>MITRE ATT&CK Mapping</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Technique</th>
-              <th>Name</th>
-              <th>Tactic</th>
-              <th>Evidence</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for m in report.attack_mapping %}
-            <tr>
-              <td><a href="https://attack.mitre.org/techniques/{{ m.technique_id.replace('.', '/') }}/" target="_blank"
-                  class="mitre-link">{{ m.technique_id }}</a></td>
-              <td>{{ m.technique_name }}</td>
-              <td><span class="badge badge-blue">{{ m.tactic }}</span></td>
-              <td style="color: var(--text-dim); font-size: 0.85rem;">{{ m.evidence }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% endif %}
+  {% if report.attack_mapping %}
+  <section class="card">
+    <h2>MITRE ATT&amp;CK Mapping</h2>
+    <table>
+      <thead>
+        <tr><th>Technique</th><th>Name</th><th>Tactic</th><th>Evidence</th></tr>
+      </thead>
+      <tbody>
+        {% for m in report.attack_mapping %}
+        <tr>
+          <td><a href="{{ m.url }}" target="_blank" rel="noopener" class="mono">{{ m.technique_id }}</a></td>
+          <td>{{ m.technique_name }}</td>
+          <td><span class="badge badge-blue">{{ m.tactic }}</span></td>
+          <td class="dim">{{ m.evidence }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
 
-      <!-- Heuristic Analysis -->
-      {% if report.heuristic_flags %}
-      <div class="card">
-        <h2>Heuristic Analysis</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Flag</th>
-              <th>Severity</th>
-              <th>Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for flag in report.heuristic_flags %}
-            <tr>
-              <td style="font-weight: 600;">{{ flag.name }}</td>
-              <td><span class="sev-{{ flag.severity }}">{{ flag.severity | upper }}</span></td>
-              <td style="color: var(--text-dim);">{{ flag.description }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% endif %}
+  {% if report.heuristic_flags %}
+  <section class="card">
+    <h2>Heuristic Analysis</h2>
+    <table>
+      <thead>
+        <tr><th>Flag</th><th>Severity</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        {% for flag in report.heuristic_flags %}
+        <tr>
+          <td class="strong">{{ flag.name }}</td>
+          <td><span class="sev-{{ flag.severity }}">{{ flag.severity | upper }}</span></td>
+          <td class="dim">{{ flag.description }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
 
-      <!-- IOC Table -->
-      {% if report.iocs %}
-      <div class="card">
-        <h2>Indicators of Compromise ({{ report.iocs | length }})</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Value</th>
-              <th>Confidence</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for ioc in report.iocs %}
-            <tr>
-              <td><span class="badge badge-blue">{{ ioc.type }}</span></td>
-              <td style="font-family: var(--mono); font-size: 0.82rem;">{{ ioc.value }}</td>
-              <td>{{ (ioc.confidence * 100) | int }}%</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% endif %}
+  {% if report.iocs %}
+  <section class="card">
+    <h2>Indicators of Compromise ({{ report.iocs | length }})</h2>
+    <table>
+      <thead>
+        <tr><th>Type</th><th>Value</th><th>Confidence</th></tr>
+      </thead>
+      <tbody>
+        {% for ioc in report.iocs %}
+        <tr>
+          <td><span class="badge badge-blue">{{ ioc.type }}</span></td>
+          <td class="mono">{{ ioc.value }}</td>
+          <td>{{ (ioc.confidence * 100) | int }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
 
-      <!-- PE Structure -->
-      {% if report.pe_analysis and report.pe_analysis.sections %}
-      <div class="two-col">
-        <div class="card">
-          <h2>PE Sections</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Size</th>
-                <th>Entropy</th>
-                <th>Chart</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for sec in report.pe_analysis.sections %}
-              <tr>
-                <td style="font-family: var(--mono);">{{ sec.name }}</td>
-                <td>{{ sec.raw_size }}</td>
-                <td>{{ sec.entropy }}</td>
-                <td style="width: 100px;">
-                  <div class="entropy-bar-container">
-                    {% if sec.entropy > 7.2 %}
-                    <div class="entropy-bar entropy-high" style="width: {{ ((sec.entropy / 8) * 100) | int }}%;"></div>
-                    {% elif sec.entropy > 5.0 %}
-                    <div class="entropy-bar entropy-med" style="width: {{ ((sec.entropy / 8) * 100) | int }}%;"></div>
-                    {% else %}
-                    <div class="entropy-bar entropy-low" style="width: {{ ((sec.entropy / 8) * 100) | int }}%;"></div>
-                    {% endif %}
-                  </div>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        {% if report.pe_analysis.imports %}
-        <div class="card">
-          <h2>Imports</h2>
-          {% for imp in report.pe_analysis.imports %}
-          <details>
-            <summary>{{ imp.dll }} ({{ imp.functions | length }} functions)</summary>
-            <div class="code-block">{% for f in imp.functions %}{{ f }}
-              {% endfor %}</div>
-          </details>
+  {% if report.pe_analysis and report.pe_analysis.sections %}
+  <div class="two-col">
+    <section class="card">
+      <h2>PE Sections</h2>
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Size</th><th>Entropy</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for sec in report.pe_analysis.sections %}
+          {% set band = 'high' if sec.entropy > 7.2 else ('med' if sec.entropy > 5.0 else 'low') %}
+          <tr>
+            <td class="mono">{{ sec.name }}</td>
+            <td>{{ sec.raw_size }}</td>
+            <td>{{ sec.entropy }}</td>
+            <td class="bar-cell">
+              <div class="entropy-bar-container">
+                <div class="entropy-bar entropy-{{ band }}" style="width: {{ (sec.entropy / 8 * 100) | int }}%;"></div>
+              </div>
+            </td>
+          </tr>
           {% endfor %}
-        </div>
+        </tbody>
+      </table>
+    </section>
+    {% if report.pe_analysis.imports %}
+    <section class="card">
+      <h2>Imports</h2>
+      {% for imp in report.pe_analysis.imports %}
+      <details>
+        <summary>{{ imp.dll }} ({{ imp.functions | length }} functions)</summary>
+        <pre class="code-block">{{ imp.functions | join("\n") }}</pre>
+      </details>
+      {% endfor %}
+    </section>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% set rules = report.detection_rules %}
+  {% if rules.yara or rules.sigma %}
+  <div class="two-col">
+    {% if rules.yara %}
+    <section class="card">
+      <h2>
+        YARA Rule
+        {% if rules.yara_matches_sample %}
+        <span class="badge badge-green">Matches sample</span>
+        {% elif rules.yara_compiles %}
+        <span class="badge badge-yellow">Compiles, no match</span>
+        {% else %}
+        <span class="badge badge-red">Does not compile</span>
         {% endif %}
-      </div>
-      {% endif %}
+      </h2>
+      <pre class="code-block">{{ rules.yara }}</pre>
+    </section>
+    {% endif %}
+    {% if rules.sigma %}
+    <section class="card">
+      <h2>Sigma Rules</h2>
+      <pre class="code-block">{{ rules.sigma }}</pre>
+    </section>
+    {% endif %}
+  </div>
+  {% endif %}
 
-      <!-- Detection Rules -->
-      <div class="two-col">
-        {% if report.detection_rules.yara %}
-        <div class="card">
-          <h2>
-            YARA Rule
-            {% if report.detection_rules.yara_validated %}
-            <span class="badge badge-green" style="margin-left: 0.5rem;">Validated [PASS]</span>
-            {% endif %}
-          </h2>
-          <div class="code-block">{{ report.detection_rules.yara }}</div>
-        </div>
-        {% endif %}
-        {% if report.detection_rules.sigma %}
-        <div class="card">
-          <h2>Sigma Rule</h2>
-          <div class="code-block">{{ report.detection_rules.sigma }}</div>
-        </div>
-        {% endif %}
-      </div>
+  {% if report.strings.suspicious %}
+  <section class="card">
+    <h2>Suspicious Strings</h2>
+    <p class="dim">{{ report.strings.total_count }} strings extracted, {{ report.strings.suspicious | length }} flagged as suspicious.</p>
+    <details>
+      <summary>Show suspicious strings</summary>
+      <pre class="code-block">{{ report.strings.suspicious | join("\n") }}</pre>
+    </details>
+  </section>
+  {% endif %}
 
-      <!-- Strings -->
-      {% if report.strings.suspicious %}
-      <div class="card">
-        <h2>Suspicious Strings</h2>
-        <p style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 0.75rem;">{{ report.strings.total_count }}
-          total strings extracted, {{ report.strings.suspicious | length }} flagged as suspicious.</p>
-        <details>
-          <summary>Show all suspicious strings ({{ report.strings.suspicious | length }})</summary>
-          <div class="code-block">{% for s in report.strings.suspicious %}{{ s }}
-            {% endfor %}</div>
-        </details>
-      </div>
-      {% endif %}
-
-      <!-- Footer -->
-      <div class="footer">
-        Generated by <a href="https://github.com/prxcode/malforge">Malforge</a> - Detection Engineering Toolkit
-      </div>
-
+  <footer class="footer">
+    Generated by <a href="https://github.com/prxcode/malforge">Malforge</a> v{{ version }}
+  </footer>
 </body>
 
 </html>

@@ -1,37 +1,24 @@
-# Malforge — HTML Report Renderer
-# Renders analysis results into a standalone HTML file using Jinja2.
-
-import json
 from pathlib import Path
 from typing import Any
 
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, PackageLoader, select_autoescape
 
-TEMPLATE_DIR = Path(__file__).parent / "templates"
+from malforge import __version__
 
 
 class HtmlReportRenderer:
-    """Renders a standalone HTML report from analysis data."""
+    """Renders the analysis report as a single self-contained HTML page."""
 
     def __init__(self) -> None:
         self.env = Environment(
-            loader=FileSystemLoader(str(TEMPLATE_DIR)),
-            autoescape=True,
+            loader=PackageLoader("malforge", "report/templates"),
+            autoescape=select_autoescape(["html"]),
+            trim_blocks=True,
+            lstrip_blocks=True,
         )
 
-    def render(self, report_data: dict[str, Any]) -> str:
-        """Render the full HTML report as a string."""
-        template = self.env.get_template("report.html")
+    def render(self, report: dict[str, Any]) -> str:
+        return self.env.get_template("report.html").render(report=report, version=__version__)
 
-        # Pre-format YARA and Sigma rules for display
-        context = {
-            "report": report_data,
-            "report_json": json.dumps(report_data, indent=2, default=str),
-        }
-
-        return template.render(**context)
-
-    def render_to_file(self, report_data: dict[str, Any], output_path: Path) -> None:
-        """Render the HTML report and write it to a file."""
-        html = self.render(report_data)
-        output_path.write_text(html, encoding="utf-8")
+    def render_to_file(self, report: dict[str, Any], output_path: Path) -> None:
+        output_path.write_text(self.render(report), encoding="utf-8")

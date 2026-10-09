@@ -1,100 +1,79 @@
+from collections import Counter
 from typing import Any
 
-from malforge.ioc.extractor import IOC
-from malforge.mitre.mapper import AttackMapping
+from malforge.analysis.heuristics import MAX_SCORE
+from malforge.ioc.extractor import NETWORK_TYPES
+from malforge.result import AnalysisResult
+
+HEURISTIC_POINTS = 60.0
+POINTS_PER_TECHNIQUE = 6.0
+MAX_TECHNIQUE_POINTS = 30.0
+POINTS_PER_NETWORK_IOC = 5.0
+MAX_NETWORK_IOC_POINTS = 10.0
+
+MALICIOUS_THRESHOLD = 60.0
+SUSPICIOUS_THRESHOLD = 25.0
+
+
+def risk_score(heuristic_score: float, technique_count: int, network_ioc_count: int) -> float:
+    """Combine the evidence into a 0-100 score.
+
+    Heuristics contribute up to 60 points, ATT&CK techniques up to 30 and
+    network IOCs up to 10. The sample's own hashes are not evidence and are
+    not counted.
+    """
+    score = (
+        heuristic_score / MAX_SCORE * HEURISTIC_POINTS
+        + min(technique_count * POINTS_PER_TECHNIQUE, MAX_TECHNIQUE_POINTS)
+        + min(network_ioc_count * POINTS_PER_NETWORK_IOC, MAX_NETWORK_IOC_POINTS)
+    )
+    return round(min(score, 100.0), 1)
+
+
+def classify(score: float) -> str:
+    if score >= MALICIOUS_THRESHOLD:
+        return "MALICIOUS"
+    if score >= SUSPICIOUS_THRESHOLD:
+        return "SUSPICIOUS"
+    return "BENIGN"
 
 
 class ReportGenerator:
-    """Generates structured threat intelligence reports."""
+    """Builds the JSON-serialisable report that feeds every output format and plugin."""
 
-    def generate(
-        self,
-        file_metadata: dict[str, Any],
-        pe_data: dict[str, Any] | None,
-        strings_data: dict[str, list[str]],
-        heuristic_flags: list[dict[str, Any]],
-        heuristic_score: float,
-        iocs: list[IOC],
-        attack_mappings: list[AttackMapping],
-        yara_rule: str | None,
-        sigma_rule: str | None,
-        yara_validated: bool,
-    ) -> dict[str, Any]:
-        """Aggregate analysis data into a structured threat report."""
+    def generate(self, data: AnalysisResult) -> dict[str, Any]:
+        network_iocs = sum(1 for ioc in data.iocs if ioc.indicator_type in NETWORK_TYPES)
+        score = risk_score(data.heuristic_score, len(data.attack_mappings), network_iocs)
+        classification = classify(score)
 
-        # IOC summary counts
-        ioc_counts: dict[str, int] = {}
-        for ioc in iocs:
-            itype = ioc.indicator_type.value
-            ioc_counts[itype] = ioc_counts.get(itype, 0) + 1
-
-        # Risk classification
-        risk_score = 0.0
-        if heuristic_flags:
-            risk_score += len(heuristic_flags) * 15.0
-        if iocs:
-            risk_score += len(iocs) * 5.0
-        risk_score = min(100.0, risk_score)
-
-        if risk_score > 60:
-            classification = "MALICIOUS"
-        elif risk_score > 30:
-            classification = "SUSPICIOUS"
-        else:
-            classification = "BENIGN"
-
-        # Executive summary
         summary = (
-            f"Analysis of {file_metadata['filename']} "
-            f"(SHA256: {file_metadata['sha256'][:16]}...) "
-            f"indicates a {classification.lower()} threat level "
-            f"(score: {risk_score:.0f}/100)."
+            f"Static analysis of {data.file_metadata['filename']} rates it "
+            f"{classification.lower()} with a risk score of {score:.0f}/100."
         )
-        if attack_mappings:
-            tactics = list({m.tactic for m in attack_mappings})
+        tactics = sorted({m.tactic for m in data.attack_mappings})
+        if tactics:
             summary += f" Observed ATT&CK tactics: {', '.join(tactics)}."
 
-        # Build full report
-        report: dict[str, Any] = {
+        validation = data.yara_validation
+        return {
             "executive_summary": summary,
-            "risk_score": risk_score,
+            "risk_score": score,
             "classification": classification,
-            "file_metadata": file_metadata,
-            "heuristic_score": heuristic_score,
-            "heuristic_flags": heuristic_flags,
-            "attack_mapping": [
-                {
-                    "technique_id": m.technique_id,
-                    "technique_name": m.technique_name,
-                    "tactic": m.tactic,
-                    "evidence": m.evidence,
-                }
-                for m in attack_mappings
-            ],
-            "iocs": [
-                {
-                    "type": ioc.indicator_type.value,
-                    "value": ioc.value,
-                    "confidence": ioc.confidence,
-                    "source": ioc.source,
-                }
-                for ioc in iocs
-            ],
-            "ioc_summary": ioc_counts,
-            "pe_analysis": pe_data,
+            "file_metadata": data.file_metadata,
+            "heuristic_score": data.heuristic_score,
+            "heuristic_flags": [f.to_dict() for f in data.heuristic_flags],
+            "attack_mapping": [m.to_dict() for m in data.attack_mappings],
+            "iocs": [ioc.to_dict() for ioc in data.iocs],
+            "ioc_summary": dict(Counter(ioc.indicator_type.value for ioc in data.iocs)),
+            "pe_analysis": data.pe_data,
             "strings": {
-                "urls": strings_data.get("urls", []),
-                "ips": strings_data.get("ips", []),
-                "registry": strings_data.get("registry", []),
-                "paths": strings_data.get("paths", []),
-                "suspicious": strings_data.get("suspicious", []),
-                "total_count": len(strings_data.get("all", [])),
+                "total_count": len(data.strings.all),
+                "suspicious": data.strings.suspicious,
             },
             "detection_rules": {
-                "yara": yara_rule,
-                "yara_validated": yara_validated,
-                "sigma": sigma_rule,
+                "yara": data.yara_rule,
+                "yara_compiles": bool(validation and validation.is_valid),
+                "yara_matches_sample": bool(validation and validation.true_positive),
+                "sigma": data.sigma_rule,
             },
         }
-
-        return report
