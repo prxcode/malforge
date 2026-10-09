@@ -1,0 +1,36 @@
+name: Bug report
+description: Something is broken or produces wrong output
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Include the command you ran and the full error or the wrong output.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: input
+    id: sample
+    attributes:
+      label: Sample hash
+      description: SHA-256 of the file, if the sample is public. Never attach live malware to an issue.
+  - type: input
+    id: version
+    attributes:
+      label: Malforge version
+      description: Output of `malforge --version`
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: OS and Python version
+      placeholder: Windows 11, Python 3.12.4
+    validations:
+      required: true
